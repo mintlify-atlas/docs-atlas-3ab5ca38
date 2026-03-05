@@ -139,7 +139,7 @@ export interface AuthState {
 
 ### Methods
 
-<ResponseField name="login" type="(token: string, refresh: string, userData: User | null, isLoading: boolean) => Promise<void>">
+<ResponseField name="login" type="(token: string, refresh: string, userData: User | null) => Promise<void>">
   Method to log in a user by storing tokens and updating state.
   
   <Expandable title="Parameters">
@@ -152,10 +152,11 @@ export interface AuthState {
     <ResponseField name="userData" type="User | null">
       User object or null
     </ResponseField>
-    <ResponseField name="isLoading" type="boolean">
-      Loading state flag
-    </ResponseField>
   </Expandable>
+  
+  <Note>
+    Note: The TypeScript interface in `types/auth.ts` includes an `isLoading` parameter, but the actual implementation in `store/useAuthStore.ts` only accepts three parameters and automatically sets `isLoading` to `false` internally.
+  </Note>
 </ResponseField>
 
 <ResponseField name="logout" type="() => Promise<void>">

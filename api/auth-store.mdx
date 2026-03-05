@@ -59,11 +59,11 @@ Logs in a user by storing tokens in SecureStore and updating the auth state.
   The user object containing user details (id, username, email).
 </ParamField>
 
-<ParamField path="isLoading" type="boolean" required>
-  Loading state flag (typically set to `false` after login).
-</ParamField>
-
 **Returns:** `Promise<void>`
+
+<Note>
+  The `login` method automatically sets `isLoading` to `false` internally. You don't need to pass it as a parameter.
+</Note>
 
 **Implementation:**
 
@@ -86,7 +86,7 @@ const login = useAuthStore((state) => state.login);
 const handleLogin = async () => {
   const { data } = await api.post("/token/", { username, password });
   const { access, refresh, user } = data;
-  await login(access, refresh, user || { id: 1, username }, false);
+  await login(access, refresh, user || { id: 1, username });
 };
 ```
 

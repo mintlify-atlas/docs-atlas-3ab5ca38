@@ -105,7 +105,7 @@ export default function Login() {
       });
       console.log("Autenticación exitosa =>", data);
       const { access, refresh, user } = data;
-      await login(access, refresh, user || { id: 1, username }, true);
+      await login(access, refresh, user || { id: 1, username });
       router.replace("/(main)/profile");
     } catch (error) {
       console.log(error);
@@ -221,7 +221,7 @@ export default function Register() {
       
       // Automatically log in after successful registration
       const { access, refresh, user } = data;
-      await login(access, refresh, user, true);
+      await login(access, refresh, user);
       router.replace("/(main)/profile");
     } catch (error) {
       Alert.alert("Error", "No se pudo crear la cuenta. Inténtalo de nuevo.");
