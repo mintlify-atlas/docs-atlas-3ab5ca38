@@ -1,0 +1,91 @@
+{
+  "projectType": "frontend",
+  "projectName": "AppBiblioteca",
+  "projectDescription": "A React Native library management app built with Expo and TypeScript for managing books, authors, and users.",
+  "theme": "palm",
+  "primaryColor": "#7c7c7c",
+  "lightColor": "#0a0a0a",
+  "darkColor": "#c9c9c9",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/authentication",
+              "concepts/routing",
+              "concepts/state-management"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/books-management",
+              "features/authors-management",
+              "features/user-management",
+              "features/authentication-flow"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/project-structure",
+              "development/api-integration",
+              "development/styling",
+              "development/running-app"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Store",
+            "pages": [
+              "api/auth-store"
+            ]
+          },
+          {
+            "group": "API Client",
+            "pages": [
+              "api/axios-client"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/auth-types"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "JWT-based authentication with automatic token refresh",
+    "Books and authors management with REST API integration",
+    "Tab-based navigation with Expo Router",
+    "Secure token storage with expo-secure-store",
+    "Zustand state management for auth",
+    "Cross-platform support (iOS, Android, Web)"
+  ],
+  "publicApiSurface": [
+    "useAuthStore (login, logout, initialize)",
+    "api axios client with interceptors",
+    "AuthState interface",
+    "LoginResponse interface",
+    "User interface"
+  ]
+}
