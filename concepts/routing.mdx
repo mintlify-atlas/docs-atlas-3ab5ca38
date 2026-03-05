@@ -1,0 +1,611 @@
+---
+title: Routing & Navigation
+description: File-based routing with Expo Router, tab navigation, and deep linking in AppBiblioteca
+---
+
+## Overview
+
+AppBiblioteca uses [Expo Router](https://docs.expo.dev/router/introduction/) for navigation, which provides:
+
+- File-based routing inspired by Next.js
+- Type-safe navigation
+- Deep linking out of the box
+- Native navigation performance
+- Automatic route generation
+
+## Route Structure
+
+The file system in the `app/` directory maps directly to routes:
+
+```
+app/
+├── _layout.tsx              # Root layout with auth guards
+├── (auth)/                  # Auth route group (doesn't affect URL)
+│   ├── _layout.tsx         # Stack navigator for auth screens
+│   ├── login.tsx           # /login
+│   └── register.tsx        # /register
+└── (main)/                  # Main app route group
+    ├── _layout.tsx         # Stack navigator for main screens
+    ├── add_book.tsx        # /(main)/add_book
+    └── (tabs)/             # Tab navigation group
+        ├── _layout.tsx    # Tab navigator
+        ├── index.tsx      # /(main)/(tabs) → Home tab
+        ├── profile.tsx    # /(main)/(tabs)/profile
+        ├── users.tsx      # /(main)/(tabs)/users
+        ├── authors.tsx    # /(main)/(tabs)/authors
+        └── books.tsx      # /(main)/(tabs)/books
+```
+
+<Note>
+Parentheses in folder names like `(auth)` and `(main)` create route groups that organize your routes without affecting the URL structure.
+</Note>
+
+## Route Groups
+
+### What are Route Groups?
+
+Route groups use parentheses `()` to:
+
+- Organize routes logically without adding segments to the URL
+- Apply different layouts to different parts of your app
+- Keep code organized by feature or access level
+
+### Auth Route Group `(auth)`
+
+Contains public authentication screens:
+
+- `login.tsx` → `/login`
+- `register.tsx` → `/register`
+
+These routes are accessible without authentication.
+
+### Main Route Group `(main)`
+
+Contains protected screens requiring authentication:
+
+- Tab-based navigation in `(tabs)/`
+- Modal screens like `add_book.tsx`
+
+All routes in this group require a valid token.
+
+## Layouts
+
+### Root Layout
+
+The root layout (`app/_layout.tsx`) handles:
+
+- Authentication initialization
+- Navigation guards
+- Loading states
+- Route protection
+
+```typescript app/_layout.tsx
+import {
+  Slot,
+  useRouter,
+  useSegments,
+  useRootNavigationState,
+} from "expo-router";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useEffect } from "react";
+import { View, ActivityIndicator } from "react-native";
+
+export default function RootLayout() {
+  const token = useAuthStore((state) => state.token);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const initialize = useAuthStore((state) => state.initialize);
+
+  const router = useRouter();
+  const segments = useSegments();
+  const navigationState = useRootNavigationState();
+
+  useEffect(() => {
+    initialize();
+  }, []);
+
+  useEffect(() => {
+    // Wait for navigation to be ready
+    if (!navigationState?.key || isLoading) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!token && !inAuthGroup) {
+      // No session, redirect to login
+      router.replace("/login");
+    } else if (token && inAuthGroup) {
+      // Has session but in auth screens, redirect to main app
+      router.replace("/(main)/(tabs)");
+    }
+  }, [token, navigationState?.key, segments, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return <Slot />;
+}
+```
+
+### Auth Layout
+
+Stack navigator for authentication screens:
+
+```typescript app/(auth)/_layout.tsx
+import { Stack } from "expo-router";
+
+export default function AuthLayout() {
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="login" />
+    </Stack>
+  );
+}
+```
+
+### Main Layout
+
+Stack navigator wrapping the tab navigator and modal screens:
+
+```typescript app/(main)/_layout.tsx
+import { Stack } from "expo-router";
+
+export default function MainLayout() {
+  return (
+    <Stack>
+      <Stack.Screen 
+        name="(tabs)" 
+        options={{ headerShown: false, title: "Home" }} 
+      />
+      <Stack.Screen
+        name="add_book"
+        options={{ title: "Agregar Libro" }}
+      />
+    </Stack>
+  );
+}
+```
+
+<Note>
+The `(tabs)` screen is the default screen in the main stack, containing the bottom tab navigator.
+</Note>
+
+## Tab Navigation
+
+The tabs layout creates a bottom tab navigator with 5 tabs:
+
+```typescript app/(main)/(tabs)/_layout.tsx
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+
+export default function AdministrationLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: "green",
+      }}
+    >
+      <Tabs.Screen
+        name="profile"
+        options={{
+          header: () => null,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="users"
+        options={{
+          header: () => null,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          header: () => null,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="authors"
+        options={{
+          title: "Authors",
+          header: () => null,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="books"
+        options={{
+          title: "Books",
+          header: () => null,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name="book" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
+  );
+}
+```
+
+### Tab Structure
+
+| Tab | Route | Icon | Description |
+|-----|-------|------|-------------|
+| Profile | `/(main)/(tabs)/profile` | person | User profile |
+| Users | `/(main)/(tabs)/users` | people | User management |
+| Home | `/(main)/(tabs)` | home | Home screen (index) |
+| Authors | `/(main)/(tabs)/authors` | people | Author management |
+| Books | `/(main)/(tabs)/books` | book | Book catalog |
+
+<Note>
+The `index.tsx` file maps to the base path of its parent directory, making it the default route.
+</Note>
+
+## Navigation Patterns
+
+### Navigating Between Screens
+
+<Tabs>
+  <Tab title="Using router.push()">
+    ```typescript
+    import { useRouter } from "expo-router";
+
+    function MyComponent() {
+      const router = useRouter();
+
+      const goToAddBook = () => {
+        router.push("/(main)/add_book");
+      };
+
+      return <Button title="Add Book" onPress={goToAddBook} />;
+    }
+    ```
+  </Tab>
+  <Tab title="Using Link component">
+    ```typescript
+    import { Link } from "expo-router";
+
+    function MyComponent() {
+      return (
+        <Link href="/(main)/add_book" asChild>
+          <Button title="Add Book" />
+        </Link>
+      );
+    }
+    ```
+  </Tab>
+  <Tab title="Using router.replace()">
+    ```typescript
+    import { useRouter } from "expo-router";
+
+    function MyComponent() {
+      const router = useRouter();
+
+      const goToLogin = () => {
+        // Replace current route (no back navigation)
+        router.replace("/login");
+      };
+
+      return <Button title="Logout" onPress={goToLogin} />;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Navigation Methods
+
+| Method | Description | Use Case |
+|--------|-------------|----------|
+| `router.push(href)` | Navigate to new screen | Standard navigation |
+| `router.replace(href)` | Replace current screen | After login/logout |
+| `router.back()` | Go to previous screen | Back button |
+| `router.canGoBack()` | Check if back is possible | Conditional back |
+
+### Passing Parameters
+
+```typescript
+// Navigate with params
+router.push({
+  pathname: "/(main)/book_detail",
+  params: { id: "123" }
+});
+
+// In the target screen
+import { useLocalSearchParams } from "expo-router";
+
+function BookDetail() {
+  const { id } = useLocalSearchParams();
+  
+  return <Text>Book ID: {id}</Text>;
+}
+```
+
+## Protected Routes
+
+The navigation guard in the root layout protects routes:
+
+```typescript
+const inAuthGroup = segments[0] === "(auth)";
+
+if (!token && !inAuthGroup) {
+  // User not authenticated and trying to access protected route
+  router.replace("/login");
+} else if (token && inAuthGroup) {
+  // User authenticated but on auth screen
+  router.replace("/(main)/(tabs)");
+}
+```
+
+### How It Works
+
+1. Monitor `segments` to detect current route group
+2. Check `token` state from auth store
+3. Redirect based on authentication status
+4. Wait for navigation to be ready before redirecting
+
+<Warning>
+Always check `navigationState?.key` before navigating in the root layout to avoid race conditions.
+</Warning>
+
+## Deep Linking
+
+Expo Router provides automatic deep linking support.
+
+### URL Scheme
+
+```json app.json
+{
+  "expo": {
+    "scheme": "appbiblioteca"
+  }
+}
+```
+
+### Deep Link Examples
+
+| URL | Destination |
+|-----|-------------|
+| `appbiblioteca://login` | Login screen |
+| `appbiblioteca://(main)/(tabs)` | Home tab |
+| `appbiblioteca://(main)/add_book` | Add book screen |
+| `appbiblioteca://(main)/(tabs)/books` | Books tab |
+
+### Universal Links (iOS)
+
+```json app.json
+{
+  "expo": {
+    "ios": {
+      "associatedDomains": [
+        "applinks:appbiblioteca.com"
+      ]
+    }
+  }
+}
+```
+
+### App Links (Android)
+
+```json app.json
+{
+  "expo": {
+    "android": {
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "https",
+              "host": "appbiblioteca.com"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    }
+  }
+}
+```
+
+## Type-Safe Navigation
+
+Expo Router automatically generates types for your routes:
+
+```typescript
+import { Href } from "expo-router";
+
+// TypeScript knows all valid routes
+const validRoute: Href = "/(main)/(tabs)/books";
+
+// TypeScript error: invalid route
+const invalidRoute: Href = "/invalid/route"; // ❌
+```
+
+## Common Patterns
+
+### Conditional Navigation
+
+```typescript
+import { useRouter } from "expo-router";
+import { useAuthStore } from "@/store/useAuthStore";
+
+function ConditionalButton() {
+  const router = useRouter();
+  const token = useAuthStore((state) => state.token);
+
+  const handlePress = () => {
+    if (token) {
+      router.push("/(main)/add_book");
+    } else {
+      router.push("/login");
+    }
+  };
+
+  return <Button title="Add Book" onPress={handlePress} />;
+}
+```
+
+### Back Navigation with Fallback
+
+```typescript
+import { useRouter } from "expo-router";
+
+function BackButton() {
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(main)/(tabs)");
+    }
+  };
+
+  return <Button title="Back" onPress={handleBack} />;
+}
+```
+
+### Tab-Specific Navigation
+
+```typescript
+import { useRouter } from "expo-router";
+
+function NavigateToTab() {
+  const router = useRouter();
+
+  return (
+    <View>
+      <Button 
+        title="Go to Books" 
+        onPress={() => router.push("/(main)/(tabs)/books")} 
+      />
+      <Button 
+        title="Go to Authors" 
+        onPress={() => router.push("/(main)/(tabs)/authors")} 
+      />
+    </View>
+  );
+}
+```
+
+## Navigation State
+
+### Accessing Navigation State
+
+```typescript
+import { usePathname, useSegments } from "expo-router";
+
+function CurrentRoute() {
+  const pathname = usePathname();
+  const segments = useSegments();
+
+  console.log("Current path:", pathname); // "/(main)/(tabs)/books"
+  console.log("Segments:", segments); // ["(main)", "(tabs)", "books"]
+
+  return <Text>Current path: {pathname}</Text>;
+}
+```
+
+### Navigation Events
+
+```typescript
+import { useRouter } from "expo-router";
+import { useEffect } from "react";
+
+function TrackedScreen() {
+  const router = useRouter();
+
+  useEffect(() => {
+    console.log("Screen mounted");
+
+    return () => {
+      console.log("Screen unmounted");
+    };
+  }, []);
+
+  return <View>...</View>;
+}
+```
+
+## Best Practices
+
+### Do's
+
+- Use `router.replace()` for authentication redirects
+- Check `canGoBack()` before calling `back()`
+- Use route groups to organize related screens
+- Implement loading states during navigation
+- Use type-safe route strings
+
+### Don'ts
+
+- Don't navigate before `navigationState?.key` is set
+- Don't use string concatenation for routes
+- Don't navigate in render (use effects or callbacks)
+- Don't forget to handle deep links in protected routes
+- Don't mix navigation paradigms (stick to Expo Router)
+
+<Warning>
+Never call navigation methods directly in the component body. Always use effects or event handlers.
+</Warning>
+
+## Troubleshooting
+
+### Navigation doesn't work on app start
+
+- Ensure you're waiting for `navigationState?.key`
+- Check `isLoading` state in auth store
+- Verify root layout is calling `initialize()`
+
+### Flashing wrong screen
+
+- Add loading screen while `isLoading` is true
+- Use `router.replace()` instead of `router.push()`
+- Check navigation guard logic
+
+### Deep links not working
+
+- Verify scheme in app.json
+- Check universal links configuration
+- Test with `npx uri-scheme open appbiblioteca://login --ios`
+
+### Back button goes to wrong screen
+
+- Use `router.replace()` for auth flows
+- Check if you need to reset navigation stack
+- Verify route group structure
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/concepts/authentication">
+    Learn about protected routes and auth guards
+  </Card>
+  <Card title="State Management" icon="database" href="/concepts/state-management">
+    Manage navigation state with Zustand
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/concepts/architecture">
+    Understand the overall app structure
+  </Card>
+  <Card title="Deep Linking" icon="link" href="https://docs.expo.dev/guides/deep-linking/">
+    Advanced deep linking configuration
+  </Card>
+</CardGroup>

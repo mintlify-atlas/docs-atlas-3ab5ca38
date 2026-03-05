@@ -1,0 +1,509 @@
+---
+title: Installation
+description: Detailed installation and configuration guide for AppBiblioteca
+---
+
+# Installation Guide
+
+This comprehensive guide covers everything you need to set up AppBiblioteca for development and production use.
+
+## System Requirements
+
+### Minimum Requirements
+
+- **Operating System**: macOS, Windows 10/11, or Linux (Ubuntu 20.04+)
+- **Node.js**: Version 18.x or higher (20.x recommended)
+- **RAM**: 8GB minimum (16GB recommended for iOS development)
+- **Storage**: 5GB free space (more for Xcode/Android Studio)
+- **Internet**: Stable connection for downloading dependencies
+
+### Platform-Specific Requirements
+
+<Accordion title="iOS Development Requirements">
+**macOS only** - iOS development requires a Mac computer
+
+- macOS Ventura (13.0) or later
+- Xcode 14.0 or later (download from Mac App Store)
+- Xcode Command Line Tools
+- CocoaPods (automatically installed with Expo)
+- iOS Simulator (included with Xcode)
+
+Install Xcode Command Line Tools:
+```bash
+xcode-select --install
+```
+</Accordion>
+
+<Accordion title="Android Development Requirements">
+Available on macOS, Windows, and Linux
+
+- Android Studio (latest stable version)
+- Android SDK Platform 33 or higher
+- Android SDK Build-Tools
+- Android Emulator or physical device
+- Java Development Kit (JDK) 11 or 17
+
+Configure environment variables:
+```bash
+# Add to ~/.bashrc, ~/.zshrc, or equivalent
+export ANDROID_HOME=$HOME/Android/Sdk
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+```
+</Accordion>
+
+<Accordion title="Web Development Requirements">
+Available on all platforms - simplest setup
+
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- No additional tools required
+</Accordion>
+
+## Installing Dependencies
+
+<Steps>
+
+<Step title="Install Node.js">
+Download and install Node.js from [nodejs.org](https://nodejs.org/)
+
+Verify installation:
+```bash
+node --version  # Should be v18.0.0 or higher
+npm --version   # Should be 9.0.0 or higher
+```
+
+<Tip>
+Use [nvm](https://github.com/nvm-sh/nvm) (Node Version Manager) to easily switch between Node.js versions:
+```bash
+nvm install 20
+nvm use 20
+```
+</Tip>
+</Step>
+
+<Step title="Clone the Repository">
+Clone AppBiblioteca from your Git repository:
+
+```bash
+git clone <repository-url>
+cd AppBiblioteca
+```
+
+Replace `<repository-url>` with your actual repository URL.
+</Step>
+
+<Step title="Install Project Dependencies">
+Install all required npm packages:
+
+<CodeGroup>
+```bash npm
+npm install
+```
+
+```bash yarn
+yarn install
+```
+</CodeGroup>
+
+This will install:
+- React Native and React (19.1.0)
+- Expo SDK (~54.0.33)
+- TypeScript (5.9.2)
+- Zustand (5.0.11) for state management
+- Axios (1.13.5) for API calls
+- Navigation libraries
+- All other dependencies from package.json
+
+<Note>
+The first installation may take 5-10 minutes depending on your internet connection.
+</Note>
+</Step>
+
+<Step title="Verify Installation">
+Check that Expo is properly installed:
+
+```bash
+npx expo --version
+```
+
+You should see the Expo version information.
+</Step>
+
+</Steps>
+
+## Setting Up the Development Environment
+
+### Configure API Endpoint
+
+The most critical configuration is setting up your backend API connection.
+
+<Steps>
+
+<Step title="Locate the API configuration file">
+Open `api/axios.ts` in your code editor:
+
+```typescript
+import axios from "axios";
+import * as SecureStore from "expo-secure-store";
+import { useAuthStore } from "@/store/useAuthStore";
+
+const api = axios.create({
+  baseURL: "http://localhost:8000/api",
+});
+```
+</Step>
+
+<Step title="Update the baseURL">
+Change the `baseURL` based on your environment:
+
+**For Web Development:**
+```typescript
+const api = axios.create({
+  baseURL: "http://localhost:8000/api",
+});
+```
+
+**For Android Emulator:**
+```typescript
+const api = axios.create({
+  baseURL: "http://10.0.2.2:8000/api", // Special Android emulator address
+});
+```
+
+**For iOS Simulator:**
+```typescript
+const api = axios.create({
+  baseURL: "http://localhost:8000/api",
+});
+```
+
+**For Physical Devices:**
+```typescript
+const api = axios.create({
+  baseURL: "http://192.168.1.100:8000/api", // Your computer's local IP
+});
+```
+
+**For Production:**
+```typescript
+const api = axios.create({
+  baseURL: "https://api.yourdomain.com/api",
+});
+```
+</Step>
+
+<Step title="Environment-based configuration (Advanced)">
+For better environment management, consider using environment variables:
+
+Create a `.env` file (not included in this setup by default):
+```bash
+API_BASE_URL=http://localhost:8000/api
+```
+
+Then update `api/axios.ts`:
+```typescript
+const api = axios.create({
+  baseURL: process.env.API_BASE_URL || "http://localhost:8000/api",
+});
+```
+</Step>
+
+</Steps>
+
+<Warning>
+**Important for Mobile Development:**
+- Android emulators cannot access `localhost` directly. Use `10.0.2.2` instead
+- iOS simulators can use `localhost`
+- Physical devices need your computer's local network IP address
+- Ensure your backend allows CORS from your mobile app's origin
+</Warning>
+
+### Understanding the API Configuration
+
+The `api/axios.ts` file includes several important features:
+
+**Request Interceptor:**
+```typescript
+api.interceptors.request.use(
+  async (config) => {
+    const token = await SecureStore.getItemAsync("userToken");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+```
+Automatically adds JWT token to all API requests.
+
+**Response Interceptor:**
+Handles token refresh automatically when tokens expire (401 responses).
+
+## Platform-Specific Setup
+
+### iOS Setup (macOS only)
+
+<Steps>
+
+<Step title="Install Xcode">
+Download and install Xcode from the Mac App Store (this is a large download, 10+ GB).
+</Step>
+
+<Step title="Install Command Line Tools">
+```bash
+xcode-select --install
+```
+</Step>
+
+<Step title="Accept Xcode License">
+```bash
+sudo xcodebuild -license accept
+```
+</Step>
+
+<Step title="Install iOS Simulator">
+Open Xcode > Preferences > Components and install desired iOS simulator versions.
+</Step>
+
+<Step title="Install CocoaPods (if needed)">
+```bash
+sudo gem install cocoapods
+```
+
+Note: Expo typically handles this automatically.
+</Step>
+
+</Steps>
+
+### Android Setup
+
+<Steps>
+
+<Step title="Install Android Studio">
+Download from [developer.android.com/studio](https://developer.android.com/studio)
+</Step>
+
+<Step title="Install Android SDK">
+During Android Studio setup, ensure you install:
+- Android SDK Platform 33 or higher
+- Android SDK Build-Tools
+- Android Emulator
+- Android SDK Platform-Tools
+</Step>
+
+<Step title="Configure Environment Variables">
+Add to your shell configuration (~/.bashrc, ~/.zshrc, etc.):
+
+```bash
+export ANDROID_HOME=$HOME/Library/Android/sdk  # macOS
+# or
+export ANDROID_HOME=$HOME/Android/Sdk  # Linux
+# or
+export ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk  # Windows
+
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+```
+
+Reload your shell:
+```bash
+source ~/.zshrc  # or ~/.bashrc
+```
+</Step>
+
+<Step title="Create Android Virtual Device (AVD)">
+Open Android Studio > Tools > Device Manager > Create Device
+
+Recommended:
+- Device: Pixel 5 or similar
+- System Image: API Level 33 (Android 13) or higher
+- RAM: 2048 MB or more
+</Step>
+
+<Step title="Verify ADB">
+```bash
+adb devices
+```
+Should run without errors.
+</Step>
+
+</Steps>
+
+### Web Setup
+
+No additional setup required! Web development works out of the box.
+
+## Running the Application
+
+After installation and configuration:
+
+```bash
+# Start development server
+npm start
+
+# Or run on specific platform
+npm run web      # Runs on http://localhost:8081
+npm run android  # Launches Android emulator
+npm run ios      # Launches iOS simulator
+```
+
+## Troubleshooting Installation Issues
+
+<Accordion title="npm install fails with EACCES error">
+**Problem**: Permission denied errors during npm install.
+
+**Solution**:
+```bash
+# Fix npm permissions (Linux/macOS)
+mkdir ~/.npm-global
+npm config set prefix '~/.npm-global'
+export PATH=~/.npm-global/bin:$PATH
+
+# Or use nvm (recommended)
+nvm install 20
+nvm use 20
+```
+</Accordion>
+
+<Accordion title="Cannot connect to backend API">
+**Problem**: App shows network errors or cannot authenticate.
+
+**Solutions**:
+1. Verify backend server is running
+2. Check `baseURL` in `api/axios.ts` matches your backend URL
+3. For Android emulator, use `http://10.0.2.2:8000` instead of `localhost`
+4. For physical devices, use your computer's local IP (find with `ipconfig` or `ifconfig`)
+5. Ensure firewall allows connections on the backend port
+6. Check CORS configuration on backend allows your app's origin
+</Accordion>
+
+<Accordion title="iOS build fails or simulator won't launch">
+**Problem**: Xcode errors or simulator crashes.
+
+**Solutions**:
+```bash
+# Clear Xcode cache
+rm -rf ~/Library/Developer/Xcode/DerivedData
+
+# Reset simulator
+xcrun simctl shutdown all
+xcrun simctl erase all
+
+# Update CocoaPods
+sudo gem install cocoapods
+pod repo update
+
+# Rebuild
+npx expo run:ios
+```
+</Accordion>
+
+<Accordion title="Android emulator is slow or won't start">
+**Problem**: Emulator performance issues.
+
+**Solutions**:
+1. Enable hardware acceleration (HAXM on Intel, Hypervisor on AMD)
+2. Allocate more RAM to AVD (4GB recommended)
+3. Use a system image with Google APIs (not Google Play)
+4. Use ARM64 image on Apple Silicon Macs
+5. Try a physical device instead
+
+```bash
+# Check emulator
+emulator -list-avds
+
+# Start emulator manually
+emulator -avd Pixel_5_API_33
+```
+</Accordion>
+
+<Accordion title="Metro bundler port already in use">
+**Problem**: Port 8081 is already occupied.
+
+**Solution**:
+```bash
+# Kill process on port 8081
+# macOS/Linux
+lsof -ti:8081 | xargs kill -9
+
+# Windows
+netstat -ano | findstr :8081
+taskkill /PID <PID> /F
+
+# Or use different port
+npx expo start --port 8082
+```
+</Accordion>
+
+<Accordion title="TypeScript errors in node_modules">
+**Problem**: Type errors from installed packages.
+
+**Solution**:
+```bash
+# Delete node_modules and reinstall
+rm -rf node_modules
+npm install
+
+# Update TypeScript
+npm install typescript@latest
+
+# Clear Expo cache
+npx expo start --clear
+```
+</Accordion>
+
+<Accordion title="SecureStore not available on web">
+**Problem**: Expo SecureStore doesn't work on web platform.
+
+**Note**: This is expected behavior. The app currently uses SecureStore which only works on native platforms. For web support, you may need to implement a fallback to localStorage or sessionStorage.
+
+The authentication may need adjustment for web use:
+```typescript
+// Example fallback (implement in your app if needed)
+const storage = Platform.OS === 'web' ? {
+  setItem: async (key, value) => localStorage.setItem(key, value),
+  getItem: async (key) => localStorage.getItem(key),
+  deleteItem: async (key) => localStorage.removeItem(key),
+} : SecureStore;
+```
+</Accordion>
+
+## Configuration Reference
+
+### Key Configuration Files
+
+**package.json**: Dependencies and scripts
+- `expo`: ~54.0.33
+- `react-native`: 0.81.5
+- `typescript`: ~5.9.2
+- `zustand`: ^5.0.11
+
+**app.json**: Expo app configuration
+- App name: AppBiblioteca
+- Platforms: iOS, Android, Web
+- New Architecture: Enabled
+- React Compiler: Enabled (experimental)
+
+**tsconfig.json**: TypeScript configuration
+- Strict mode enabled
+- Path aliases (@/ for imports)
+
+**api/axios.ts**: API client configuration
+- Base URL configuration
+- JWT token handling
+- Automatic token refresh
+
+## Next Steps
+
+After successful installation:
+
+1. **Start the backend API** - Ensure your Django/backend server is running
+2. **Test authentication** - Try logging in to verify API connectivity
+3. **Explore the codebase** - Familiarize yourself with the project structure
+4. **Read the architecture guide** - Understand how the app is organized
+5. **Start developing** - Begin adding features or customizing the app
+
+<Tip>
+Use the [Quickstart Guide](/quickstart) for a faster setup if you just want to get the app running quickly.
+</Tip>

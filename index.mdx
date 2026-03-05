@@ -1,97 +1,170 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "AppBiblioteca Documentation"
+description: "A modern React Native library management app built with Expo and TypeScript"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative dark:bg-[#0f1117] bg-white overflow-hidden">
+  {/* Hero Section */}
+  <div className="relative py-20 px-4 sm:px-6 lg:px-8 dark:bg-gradient-to-b dark:from-[#1a1d27] dark:to-[#0f1117] bg-gradient-to-b from-gray-50 to-white">
+    <div className="max-w-7xl mx-auto text-center">
+      <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold dark:text-gray-100 text-gray-900 mb-6">
+        Welcome to AppBiblioteca
+      </h1>
+      <p className="text-base sm:text-lg md:text-xl dark:text-gray-400 text-gray-600 max-w-2xl mx-auto mb-8">
+        Build powerful library management applications with React Native, Expo, and TypeScript. 
+        Manage books, authors, and users with JWT authentication and real-time synchronization.
+      </p>
+      <div className="flex flex-wrap gap-4 justify-center">
+        <a 
+          href="/quickstart" 
+          className="inline-flex items-center px-6 py-3 rounded-full text-base font-semibold bg-[#7c7c7c] text-white hover:bg-[#6a6a6a] transition-colors no-underline"
+        >
+          Get Started
+        </a>
+        <a 
+          href="/api/auth-store" 
+          className="inline-flex items-center px-6 py-3 rounded-full text-base font-semibold dark:bg-white/10 bg-gray-900/10 dark:text-white text-gray-900 dark:border-white/30 border-gray-900/30 border hover:dark:bg-white/20 hover:bg-gray-900/20 transition-colors no-underline"
+        >
+          Explore API
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+{/* Quick Start Section */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl md:text-3xl font-semibold dark:text-white text-gray-900 mb-2">Quick Start</h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8">Get up and running with AppBiblioteca in minutes</p>
+  
+  <Steps>
+    <Step title="Install dependencies">
+      Clone the repository and install all required packages.
+      
+      ```bash
+      git clone https://github.com/ederjuarez/biblioteca_frontend-.git
+      cd biblioteca_frontend-
+      npm install
+      ```
+    </Step>
+    
+    <Step title="Configure your API endpoint">
+      Update the API base URL in `api/axios.ts` to point to your backend server.
+      
+      ```typescript
+      const api = axios.create({
+        baseURL: "http://your-backend-url:8000/api",
+      });
+      ```
+      
+      <Note>The default configuration points to `http://localhost:8000/api`</Note>
+    </Step>
+    
+    <Step title="Start the development server">
+      Launch the Expo development server and run your app.
+      
+      ```bash
+      npx expo start
+      ```
+      
+      You can now open the app on:
+      - **iOS**: Press `i` to open in iOS simulator
+      - **Android**: Press `a` to open in Android emulator
+      - **Web**: Press `w` to open in browser
+    </Step>
+    
+    <Step title="Sign in and explore">
+      Use your credentials to log in and start managing your library.
+      
+      The app will automatically handle token storage and refresh using `expo-secure-store`.
+    </Step>
+  </Steps>
+</div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+{/* Key Features */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl md:text-3xl font-semibold dark:text-white text-gray-900 mb-2">Key Features</h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8">Everything you need to build a modern library management app</p>
+  
+  <CardGroup cols={2}>
+    <Card title="JWT Authentication" icon="shield-halved" href="/concepts/authentication">
+      Secure authentication with automatic token refresh and persistent login sessions
+    </Card>
+    <Card title="Books & Authors Management" icon="book" href="/features/books-management">
+      Complete CRUD operations for managing books and authors with REST API integration
+    </Card>
+    <Card title="Tab-Based Navigation" icon="compass" href="/concepts/routing">
+      Intuitive navigation powered by Expo Router with file-based routing
+    </Card>
+    <Card title="State Management" icon="database" href="/concepts/state-management">
+      Efficient global state management using Zustand for authentication and user data
+    </Card>
+    <Card title="Cross-Platform" icon="mobile-screen" href="/development/running-app">
+      Build once, deploy everywhere - iOS, Android, and Web support out of the box
+    </Card>
+    <Card title="TypeScript Support" icon="code" href="/development/project-structure">
+      Full TypeScript support with type-safe API calls and component props
+    </Card>
+  </CardGroup>
+</div>
 
-## Make it yours
+{/* Explore by Topic */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl md:text-3xl font-semibold dark:text-white text-gray-900 mb-2">Explore by Topic</h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8">Deep dive into specific areas of the application</p>
+  
+  <CardGroup cols={3}>
+    <Card title="Architecture" icon="diagram-project" href="/concepts/architecture">
+      Learn about the app structure and design patterns
+    </Card>
+    <Card title="Authentication Flow" icon="key" href="/features/authentication-flow">
+      Understand how user authentication works
+    </Card>
+    <Card title="API Integration" icon="plug" href="/development/api-integration">
+      Connect to your backend API with Axios
+    </Card>
+    <Card title="User Management" icon="users" href="/features/user-management">
+      Manage user profiles and permissions
+    </Card>
+    <Card title="Styling Guide" icon="palette" href="/development/styling">
+      Customize the look and feel of your app
+    </Card>
+    <Card title="API Reference" icon="brackets-curly" href="/api/auth-store">
+      Explore the complete API documentation
+    </Card>
+  </CardGroup>
+</div>
 
-Design a docs site that looks great and empowers your users.
+{/* Resources */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl md:text-3xl font-semibold dark:text-white text-gray-900 mb-2">Resources</h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8">Additional resources to help you succeed</p>
+  
+  <CardGroup cols={2}>
+    <Card title="Expo Documentation" icon="book-open" href="https://docs.expo.dev">
+      Learn more about Expo and React Native development
+    </Card>
+    <Card title="GitHub Repository" icon="github" href="https://github.com/ederjuarez/biblioteca_frontend-">
+      View the source code and contribute to the project
+    </Card>
+  </CardGroup>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+{/* CTA Banner */}
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="dark:bg-[#1a1d27] bg-gray-50 rounded-2xl p-8 md:p-12 dark:border-[#27272a] border-gray-200 border text-center">
+    <h2 className="text-2xl md:text-3xl font-semibold dark:text-white text-gray-900 mb-4">
+      Ready to get started?
+    </h2>
+    <p className="text-base dark:text-gray-400 text-gray-600 max-w-2xl mx-auto mb-6">
+      Follow our quickstart guide to set up your development environment and build your first feature.
+    </p>
+    <a 
+      href="/quickstart" 
+      className="inline-flex items-center px-6 py-3 rounded-full text-base font-semibold bg-[#7c7c7c] text-white hover:bg-[#6a6a6a] transition-colors no-underline"
+    >
+      Start Building Now
+    </a>
+  </div>
+</div>

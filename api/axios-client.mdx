@@ -1,0 +1,355 @@
+---
+title: "Axios API Client"
+description: "Configured Axios instance for making authenticated HTTP requests to the backend API"
+---
+
+## Overview
+
+The Axios API client is a pre-configured instance of Axios that handles authentication, automatic token refresh, and provides a centralized way to make HTTP requests to the backend API.
+
+## Client Location
+
+```typescript
+import api from "@/api/axios";
+```
+
+**File:** `api/axios.ts`
+
+## Configuration
+
+### Base URL
+
+The API client is configured with a base URL pointing to your backend server:
+
+```typescript
+const api = axios.create({
+  baseURL: "http://localhost:8000/api",
+});
+```
+
+<Warning>
+  Change `http://localhost:8000/api` to your production API URL before deploying.
+</Warning>
+
+<Accordion title="Platform-Specific Base URLs">
+  - **iOS Simulator**: Use `http://localhost:8000/api`
+  - **Android Emulator**: Use `http://10.0.2.2:8000/api` (Android maps localhost to the emulator itself)
+  - **Physical Device**: Use your computer's IP address, e.g., `http://192.168.1.100:8000/api`
+  - **Production**: Use your production domain, e.g., `https://api.yourdomain.com`
+</Accordion>
+
+## Interceptors
+
+### Request Interceptor
+
+Automatically adds the JWT access token to all outgoing requests:
+
+```typescript
+api.interceptors.request.use(
+  async (config) => {
+    const token = await SecureStore.getItemAsync("userToken");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+```
+
+**What it does:**
+1. Retrieves the access token from SecureStore
+2. Adds an `Authorization: Bearer <token>` header to the request
+3. Ensures all API requests are authenticated automatically
+
+### Response Interceptor
+
+Handles automatic token refresh when the access token expires:
+
+```typescript
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log("Token expirado, intentando refrescar...");
+      originalRequest._retry = true;
+      try {
+        const refreshToken = await SecureStore.getItemAsync("refreshToken");
+        if (!refreshToken) {
+          return Promise.reject(error);
+        }
+
+        const response = await axios.post(
+          "http://localhost:8000/api/token/refresh/",
+          { refresh: refreshToken },
+        );
+        const { access } = response.data;
+        await SecureStore.setItemAsync("userToken", access);
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.log("Error al refrescar token =>", refreshError);
+        const {logout} = useAuthStore.getState();
+        logout();
+        return Promise.reject(refreshError);
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+```
+
+**Token Refresh Flow:**
+
+<Steps>
+  <Step title="Detect expired token">
+    When a request returns a `401 Unauthorized` status, the interceptor catches it.
+  </Step>
+  
+  <Step title="Retrieve refresh token">
+    Fetches the refresh token from SecureStore.
+  </Step>
+  
+  <Step title="Request new access token">
+    Sends the refresh token to `/api/token/refresh/` to get a new access token.
+  </Step>
+  
+  <Step title="Store new token">
+    Saves the new access token to SecureStore.
+  </Step>
+  
+  <Step title="Retry original request">
+    Updates the original request's authorization header and retries it with the new token.
+  </Step>
+  
+  <Step title="Handle refresh failure">
+    If token refresh fails, logs the user out and rejects the request.
+  </Step>
+</Steps>
+
+## Usage Examples
+
+### GET Request
+
+```typescript
+import api from "@/api/axios";
+
+// Fetch books
+const fetchBooks = async () => {
+  try {
+    const response = await api.get("/books/");
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching books:", error);
+    throw error;
+  }
+};
+```
+
+**Real Example from `books.tsx`:**
+
+```typescript app/(main)/(tabs)/books.tsx
+useEffect(() => {
+  try {
+    api.get("/books/").then((response) => {
+      setBooks(response.data);
+    });
+  } catch (error) {
+    console.log("Error fetching books =>", error);
+  }
+}, []);
+```
+
+### POST Request
+
+```typescript
+import api from "@/api/axios";
+
+// Login user
+const loginUser = async (username: string, password: string) => {
+  try {
+    const response = await api.post("/token/", { username, password });
+    return response.data;
+  } catch (error) {
+    console.error("Login failed:", error);
+    throw error;
+  }
+};
+```
+
+**Real Example from `login.tsx`:**
+
+```typescript app/(auth)/login.tsx
+const handleLogin = async () => {
+  try {
+    const { data } = await api.post<LoginResponse>("/token/", {
+      username,
+      password,
+    });
+    const { access, refresh, user } = data;
+    await login(access, refresh, user || { id: 1, username }, true);
+    router.replace("/(main)/profile");
+  } catch (error) {
+    console.log(error);
+    Alert.alert("Error", "Credenciales incorrectas. Por favor, inténtalo de nuevo.");
+  }
+};
+```
+
+### PUT/PATCH Request
+
+```typescript
+import api from "@/api/axios";
+
+// Update book
+const updateBook = async (bookId: number, data: Partial<Book>) => {
+  try {
+    const response = await api.put(`/books/${bookId}/`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating book:", error);
+    throw error;
+  }
+};
+```
+
+### DELETE Request
+
+```typescript
+import api from "@/api/axios";
+
+// Delete book
+const deleteBook = async (bookId: number) => {
+  try {
+    await api.delete(`/books/${bookId}/`);
+  } catch (error) {
+    console.error("Error deleting book:", error);
+    throw error;
+  }
+};
+```
+
+## Error Handling
+
+### Handling API Errors
+
+```typescript
+import api from "@/api/axios";
+import { Alert } from "react-native";
+
+const fetchData = async () => {
+  try {
+    const response = await api.get("/endpoint/");
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      // Server responded with error status
+      console.error("Server error:", error.response.status);
+      Alert.alert("Error", error.response.data.message || "Server error");
+    } else if (error.request) {
+      // Request made but no response received
+      console.error("Network error:", error.request);
+      Alert.alert("Error", "Network error. Please check your connection.");
+    } else {
+      // Something else happened
+      console.error("Error:", error.message);
+      Alert.alert("Error", "An unexpected error occurred");
+    }
+    throw error;
+  }
+};
+```
+
+## Complete Implementation
+
+```typescript api/axios.ts
+import axios from "axios";
+import * as SecureStore from "expo-secure-store";
+import { useAuthStore } from "@/store/useAuthStore";
+
+const api = axios.create({
+  baseURL: "http://localhost:8000/api",
+});
+
+api.interceptors.request.use(
+  async (config) => {
+    const token = await SecureStore.getItemAsync("userToken");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log("Token expirado, intentando refrescar...");
+      originalRequest._retry = true;
+      try {
+        const refreshToken = await SecureStore.getItemAsync("refreshToken");
+        if (!refreshToken) {
+          return Promise.reject(error);
+        }
+
+        const response = await axios.post(
+          "http://localhost:8000/api/token/refresh/",
+          { refresh: refreshToken },
+        );
+        const { access } = response.data;
+        await SecureStore.setItemAsync("userToken", access);
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.log("Error al refrescar token =>", refreshError);
+        const {logout} = useAuthStore.getState();
+        logout();
+        return Promise.reject(refreshError);
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+
+export default api;
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use async/await" icon="hourglass">
+    Always use async/await for better error handling and code readability.
+  </Card>
+  <Card title="Handle errors gracefully" icon="triangle-exclamation">
+    Always wrap API calls in try/catch blocks and provide user-friendly error messages.
+  </Card>
+  <Card title="Type your responses" icon="code">
+    Use TypeScript interfaces to type API responses for better type safety.
+  </Card>
+  <Card title="Avoid hardcoded URLs" icon="link-slash">
+    Use relative paths (e.g., `/books/`) since the base URL is already configured.
+  </Card>
+</CardGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Authentication Store" icon="database" href="/api/auth-store">
+    Learn about the auth state management
+  </Card>
+  <Card title="Authentication Concepts" icon="shield-halved" href="/concepts/authentication">
+    Understand the authentication flow
+  </Card>
+  <Card title="API Integration Guide" icon="plug" href="/development/api-integration">
+    Complete guide to API integration
+  </Card>
+  <Card title="Auth Types" icon="brackets-curly" href="/api/auth-types">
+    View TypeScript type definitions
+  </Card>
+</CardGroup>

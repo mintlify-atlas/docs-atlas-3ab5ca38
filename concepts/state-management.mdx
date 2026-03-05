@@ -1,0 +1,737 @@
+---
+title: State Management
+description: Zustand-based state management for authentication and global state in AppBiblioteca
+---
+
+## Overview
+
+AppBiblioteca uses [Zustand](https://github.com/pmndrs/zustand) for state management, providing:
+
+- Simple, unopinionated state management
+- Minimal boilerplate compared to Redux
+- React hooks-based API
+- No context providers needed
+- Easy integration with async storage
+- Excellent TypeScript support
+
+## Why Zustand?
+
+### Advantages
+
+<CardGroup cols={2}>
+  <Card title="Simple API" icon="code">
+    Clean, hook-based API with minimal setup
+  </Card>
+  <Card title="No Boilerplate" icon="rectangle-terminal">
+    No actions, reducers, or dispatchers required
+  </Card>
+  <Card title="TypeScript First" icon="brackets-curly">
+    Excellent TypeScript inference and support
+  </Card>
+  <Card title="Performance" icon="gauge-high">
+    Optimized re-renders with selector-based subscriptions
+  </Card>
+</CardGroup>
+
+### Comparison with Redux
+
+| Feature | Zustand | Redux |
+|---------|---------|-------|
+| Setup | 5-10 lines | 50+ lines |
+| Boilerplate | Minimal | Heavy |
+| Learning curve | Gentle | Steep |
+| Bundle size | 1.2kb | 2.6kb (+ toolkit) |
+| Async actions | Built-in | Requires middleware |
+| DevTools | Optional | Required |
+
+<Note>
+Zustand is perfect for small to medium apps. For large-scale apps with complex state requirements, Redux might still be preferred.
+</Note>
+
+## Auth Store Implementation
+
+The primary store in AppBiblioteca manages authentication state:
+
+```typescript store/useAuthStore.ts
+import { create } from "zustand";
+import * as SecureStore from "expo-secure-store";
+import { AuthState } from "@/types/auth";
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  token: null,
+  refresh: null,
+  isLoading: true, // Start as true to block initial navigation
+
+  login: async (token, refresh, userData) => {
+    await SecureStore.setItemAsync("userToken", token);
+    await SecureStore.setItemAsync("refreshToken", refresh);
+    set({ token, refresh, user: userData, isLoading: false });
+  },
+
+  logout: async () => {
+    await SecureStore.deleteItemAsync("userToken");
+    await SecureStore.deleteItemAsync("refreshToken");
+    set({ token: null, refresh: null, user: null, isLoading: false });
+  },
+
+  initialize: async () => {
+    try {
+      const token = await SecureStore.getItemAsync("userToken");
+      // Set token (if exists) and always turn off isLoading
+      set({ token, isLoading: false });
+    } catch (error) {
+      console.error("Error loading token:", error);
+      set({ isLoading: false });
+    }
+  },
+}));
+```
+
+## Store Anatomy
+
+### State Shape
+
+The auth store maintains:
+
+```typescript
+interface AuthState {
+  // State
+  user: User | null;          // Current user data
+  token: string | null;       // JWT access token
+  refresh: string | null;     // JWT refresh token
+  isLoading: boolean;         // Loading state
+
+  // Actions
+  login: (token, refresh, userData) => Promise<void>;
+  logout: () => Promise<void>;
+  initialize: () => Promise<void>;
+}
+```
+
+### Creating a Store
+
+Basic store creation pattern:
+
+```typescript
+import { create } from "zustand";
+
+interface MyState {
+  // State properties
+  count: number;
+  
+  // Actions
+  increment: () => void;
+  decrement: () => void;
+}
+
+export const useMyStore = create<MyState>((set) => ({
+  count: 0,
+  
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  decrement: () => set((state) => ({ count: state.count - 1 })),
+}));
+```
+
+## Using Stores in Components
+
+### Basic Usage
+
+<Tabs>
+  <Tab title="Single Value">
+    ```typescript
+    import { useAuthStore } from "@/store/useAuthStore";
+
+    function UserProfile() {
+      const user = useAuthStore((state) => state.user);
+
+      return <Text>Welcome, {user?.username}</Text>;
+    }
+    ```
+  </Tab>
+  <Tab title="Multiple Values">
+    ```typescript
+    import { useAuthStore } from "@/store/useAuthStore";
+
+    function AuthStatus() {
+      const { user, token, isLoading } = useAuthStore((state) => ({
+        user: state.user,
+        token: state.token,
+        isLoading: state.isLoading,
+      }));
+
+      if (isLoading) return <ActivityIndicator />;
+      if (!token) return <Text>Not logged in</Text>;
+
+      return <Text>Logged in as {user?.username}</Text>;
+    }
+    ```
+  </Tab>
+  <Tab title="Actions Only">
+    ```typescript
+    import { useAuthStore } from "@/store/useAuthStore";
+
+    function LogoutButton() {
+      const logout = useAuthStore((state) => state.logout);
+
+      return <Button title="Logout" onPress={logout} />;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Optimized Selectors
+
+Zustand only re-renders when selected values change:
+
+```typescript
+// ✅ Good: Only re-renders when user changes
+const user = useAuthStore((state) => state.user);
+
+// ❌ Bad: Re-renders on any state change
+const state = useAuthStore();
+const user = state.user;
+```
+
+### Accessing Store Outside Components
+
+You can access the store outside React components:
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+
+// Get current state
+const currentUser = useAuthStore.getState().user;
+
+// Call actions
+const { logout } = useAuthStore.getState();
+await logout();
+
+// Subscribe to changes
+const unsubscribe = useAuthStore.subscribe(
+  (state) => console.log("User changed:", state.user)
+);
+```
+
+<Note>
+This is used in `api/axios.ts` to call `logout()` when token refresh fails.
+</Note>
+
+## Store Actions
+
+### login()
+
+Authenticates user and stores tokens:
+
+```typescript
+login: async (token, refresh, userData) => {
+  // 1. Persist tokens to secure storage
+  await SecureStore.setItemAsync("userToken", token);
+  await SecureStore.setItemAsync("refreshToken", refresh);
+  
+  // 2. Update state
+  set({ token, refresh, user: userData, isLoading: false });
+}
+```
+
+**Usage:**
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+import api from "@/api/axios";
+
+const login = useAuthStore((state) => state.login);
+
+const handleLogin = async () => {
+  const { data } = await api.post("/token/", { username, password });
+  await login(data.access, data.refresh, data.user);
+};
+```
+
+### logout()
+
+Clears authentication state and tokens:
+
+```typescript
+logout: async () => {
+  // 1. Remove tokens from secure storage
+  await SecureStore.deleteItemAsync("userToken");
+  await SecureStore.deleteItemAsync("refreshToken");
+  
+  // 2. Clear state
+  set({ token: null, refresh: null, user: null, isLoading: false });
+}
+```
+
+**Usage:**
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+
+function LogoutButton() {
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = async () => {
+    await logout();
+    // Navigation guard will handle redirect to login
+  };
+
+  return <Button title="Logout" onPress={handleLogout} />;
+}
+```
+
+### initialize()
+
+Restores auth state on app startup:
+
+```typescript
+initialize: async () => {
+  try {
+    const token = await SecureStore.getItemAsync("userToken");
+    set({ token, isLoading: false });
+  } catch (error) {
+    console.error("Error loading token:", error);
+    set({ isLoading: false });
+  }
+}
+```
+
+**Usage:**
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+import { useEffect } from "react";
+
+function RootLayout() {
+  const initialize = useAuthStore((state) => state.initialize);
+
+  useEffect(() => {
+    initialize();
+  }, []);
+
+  // ...
+}
+```
+
+<Warning>
+Always call `initialize()` in your root layout to restore auth state on app startup.
+</Warning>
+
+## Updating State
+
+### Using set()
+
+Zustand provides the `set` function to update state:
+
+```typescript
+// Replace specific properties
+set({ user: newUser });
+
+// Using previous state
+set((state) => ({ count: state.count + 1 }));
+
+// Multiple properties
+set({ user: newUser, isLoading: false });
+```
+
+### Immer Integration
+
+For complex state updates, use Immer middleware:
+
+```typescript
+import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
+
+interface State {
+  nested: {
+    count: number;
+  };
+  increment: () => void;
+}
+
+const useStore = create<State>()((
+  immer((set) => ({
+    nested: { count: 0 },
+    
+    increment: () => set((state) => {
+      state.nested.count++; // Direct mutation with Immer
+    }),
+  }))
+));
+```
+
+## Persistence
+
+### Secure Storage Integration
+
+For sensitive data like auth tokens:
+
+```typescript
+import * as SecureStore from "expo-secure-store";
+
+login: async (token, refresh, userData) => {
+  // Save to secure storage
+  await SecureStore.setItemAsync("userToken", token);
+  await SecureStore.setItemAsync("refreshToken", refresh);
+  
+  // Update store
+  set({ token, refresh, user: userData });
+}
+```
+
+### AsyncStorage Integration
+
+For non-sensitive data, use persist middleware:
+
+```typescript
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+interface AppSettings {
+  theme: 'light' | 'dark';
+  language: string;
+  setTheme: (theme: 'light' | 'dark') => void;
+}
+
+export const useSettingsStore = create<AppSettings>()((
+  persist(
+    (set) => ({
+      theme: 'light',
+      language: 'en',
+      setTheme: (theme) => set({ theme }),
+    }),
+    {
+      name: 'app-settings',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+));
+```
+
+## Multiple Stores
+
+You can create multiple stores for different domains:
+
+```typescript
+// store/useAuthStore.ts
+export const useAuthStore = create<AuthState>((set) => ({
+  // Auth state...
+}));
+
+// store/useBooksStore.ts
+export const useBooksStore = create<BooksState>((set) => ({
+  books: [],
+  loading: false,
+  fetchBooks: async () => {
+    set({ loading: true });
+    const books = await api.get('/books');
+    set({ books, loading: false });
+  },
+}));
+
+// store/useAuthorsStore.ts
+export const useAuthorsStore = create<AuthorsState>((set) => ({
+  authors: [],
+  // ...
+}));
+```
+
+### Using Multiple Stores
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+import { useBooksStore } from "@/store/useBooksStore";
+
+function BooksList() {
+  const user = useAuthStore((state) => state.user);
+  const { books, fetchBooks } = useBooksStore();
+
+  useEffect(() => {
+    fetchBooks();
+  }, []);
+
+  return (
+    <View>
+      <Text>Welcome, {user?.username}</Text>
+      {books.map(book => <BookItem key={book.id} book={book} />)}
+    </View>
+  );
+}
+```
+
+## Common Patterns
+
+### Loading States
+
+```typescript
+interface DataState {
+  data: any[];
+  loading: boolean;
+  error: string | null;
+  fetch: () => Promise<void>;
+}
+
+const useDataStore = create<DataState>((set) => ({
+  data: [],
+  loading: false,
+  error: null,
+  
+  fetch: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.get('/data');
+      set({ data: response.data, loading: false });
+    } catch (error) {
+      set({ error: error.message, loading: false });
+    }
+  },
+}));
+```
+
+### Computed Values
+
+```typescript
+interface CartState {
+  items: CartItem[];
+  addItem: (item: CartItem) => void;
+}
+
+const useCartStore = create<CartState>((set) => ({
+  items: [],
+  addItem: (item) => set((state) => ({ 
+    items: [...state.items, item] 
+  })),
+}));
+
+// In component
+function CartSummary() {
+  const items = useCartStore((state) => state.items);
+  
+  // Computed value
+  const total = items.reduce((sum, item) => sum + item.price, 0);
+  const count = items.length;
+
+  return (
+    <View>
+      <Text>Items: {count}</Text>
+      <Text>Total: ${total}</Text>
+    </View>
+  );
+}
+```
+
+### Resetting State
+
+```typescript
+interface ResetState {
+  data: any[];
+  filter: string;
+  reset: () => void;
+}
+
+const initialState = {
+  data: [],
+  filter: '',
+};
+
+const useResetStore = create<ResetState>((set) => ({
+  ...initialState,
+  reset: () => set(initialState),
+}));
+```
+
+## DevTools Integration
+
+Integrate with Redux DevTools for debugging:
+
+```typescript
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+
+interface State {
+  count: number;
+  increment: () => void;
+}
+
+export const useStore = create<State>()((
+  devtools(
+    (set) => ({
+      count: 0,
+      increment: () => set((state) => ({ count: state.count + 1 })),
+    }),
+    { name: 'MyStore' }
+  )
+));
+```
+
+## TypeScript Best Practices
+
+### Define Clear Interfaces
+
+```typescript
+// ✅ Good: Clear, typed interface
+interface UserState {
+  user: User | null;
+  loading: boolean;
+  login: (credentials: Credentials) => Promise<void>;
+  logout: () => void;
+}
+
+// ❌ Bad: Untyped or any
+const useStore = create((set) => ({ ... }));
+```
+
+### Type Selectors
+
+```typescript
+// ✅ Good: Typed selector
+const user = useAuthStore((state: AuthState) => state.user);
+
+// ✅ Better: Automatic inference with typed store
+const user = useAuthStore((state) => state.user); // user is User | null
+```
+
+### Extract Selector Functions
+
+```typescript
+// Reusable selectors
+const selectUser = (state: AuthState) => state.user;
+const selectIsAuthenticated = (state: AuthState) => !!state.token;
+
+function MyComponent() {
+  const user = useAuthStore(selectUser);
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  
+  // ...
+}
+```
+
+## Performance Optimization
+
+### Avoid Creating New Objects in Selectors
+
+```typescript
+// ❌ Bad: Creates new object on every render
+const data = useStore((state) => ({
+  user: state.user,
+  token: state.token,
+}));
+
+// ✅ Good: Select only what you need
+const user = useStore((state) => state.user);
+const token = useStore((state) => state.token);
+
+// ✅ Alternative: Use shallow equality
+import { shallow } from "zustand/shallow";
+
+const { user, token } = useStore(
+  (state) => ({ user: state.user, token: state.token }),
+  shallow
+);
+```
+
+### Memoize Computed Values
+
+```typescript
+import { useMemo } from 'react';
+
+function ExpensiveComponent() {
+  const items = useStore((state) => state.items);
+  
+  const total = useMemo(() => {
+    return items.reduce((sum, item) => sum + item.price, 0);
+  }, [items]);
+  
+  return <Text>Total: ${total}</Text>;
+}
+```
+
+## Testing Stores
+
+### Unit Testing
+
+```typescript
+import { renderHook, act } from '@testing-library/react-hooks';
+import { useAuthStore } from './useAuthStore';
+
+describe('useAuthStore', () => {
+  beforeEach(() => {
+    // Reset store state
+    useAuthStore.setState({
+      user: null,
+      token: null,
+      refresh: null,
+      isLoading: false,
+    });
+  });
+
+  it('should login user', async () => {
+    const { result } = renderHook(() => useAuthStore());
+
+    await act(async () => {
+      await result.current.login('token', 'refresh', { id: 1, username: 'test' });
+    });
+
+    expect(result.current.token).toBe('token');
+    expect(result.current.user?.username).toBe('test');
+  });
+
+  it('should logout user', async () => {
+    const { result } = renderHook(() => useAuthStore());
+
+    // Setup initial state
+    act(() => {
+      useAuthStore.setState({ token: 'token', user: { id: 1, username: 'test' } });
+    });
+
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    expect(result.current.token).toBeNull();
+    expect(result.current.user).toBeNull();
+  });
+});
+```
+
+## Best Practices
+
+### Do's
+
+- Keep stores focused on specific domains
+- Use TypeScript for type safety
+- Use selectors to prevent unnecessary re-renders
+- Initialize async state (tokens, user data) on app startup
+- Handle loading and error states
+- Use shallow equality for object selections
+
+### Don'ts
+
+- Don't put everything in one store
+- Don't select entire state when you only need part
+- Don't create new objects in selectors
+- Don't forget to handle async errors
+- Don't mix UI state with global state
+- Don't store derived/computed values
+
+<Warning>
+Avoid putting local component state in Zustand stores. Use `useState` for UI-specific state like form inputs, modals, etc.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/concepts/authentication">
+    See how auth store is used in practice
+  </Card>
+  <Card title="Routing" icon="route" href="/concepts/routing">
+    Learn how state affects navigation
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/concepts/architecture">
+    Understand how stores fit in the architecture
+  </Card>
+  <Card title="Zustand Docs" icon="book" href="https://github.com/pmndrs/zustand">
+    Official Zustand documentation
+  </Card>
+</CardGroup>

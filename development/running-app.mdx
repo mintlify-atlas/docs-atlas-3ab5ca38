@@ -1,0 +1,459 @@
+---
+title: 'Running the App'
+description: 'How to run AppBiblioteca on different platforms and debug common issues'
+---
+
+## Overview
+
+AppBiblioteca is built with **Expo**, which provides a simple development experience for React Native apps. You can run the app on iOS, Android, web, and physical devices.
+
+## Development Server
+
+### Start the Development Server
+
+```bash
+npm start
+```
+
+This starts the Expo development server and shows a QR code with several options:
+
+```
+› Press a │ open Android
+› Press i │ open iOS simulator
+› Press w │ open web
+
+› Press r │ reload app
+› Press m │ toggle menu
+› Press ? │ show all commands
+```
+
+<Info>
+The development server runs on `http://localhost:8081` by default and enables hot reload for instant updates as you code.
+</Info>
+
+## Available Scripts
+
+From `package.json`:
+
+<CodeGroup>
+
+```bash Start Development Server
+npm start
+# or
+npm run start
+
+# Starts Expo development server
+```
+
+```bash Android
+npm run android
+
+# Starts the app on Android emulator or connected device
+# Equivalent to: expo start --android
+```
+
+```bash iOS
+npm run ios
+
+# Starts the app on iOS simulator
+# Equivalent to: expo start --ios
+# Note: macOS only
+```
+
+```bash Web
+npm run web
+
+# Starts the app in web browser
+# Equivalent to: expo start --web
+```
+
+```bash Lint
+npm run lint
+
+# Runs ESLint to check code quality
+# Equivalent to: expo lint
+```
+
+</CodeGroup>
+
+## Running on iOS Simulator
+
+<Steps>
+  <Step title="Install Xcode (macOS only)">
+    Download and install Xcode from the Mac App Store.
+  </Step>
+  
+  <Step title="Install Command Line Tools">
+    ```bash
+    xcode-select --install
+    ```
+  </Step>
+  
+  <Step title="Open Simulator">
+    Open Xcode → Preferences → Locations → Select Command Line Tools version
+    
+    Open Simulator: `open -a Simulator`
+  </Step>
+  
+  <Step title="Run the App">
+    ```bash
+    npm run ios
+    ```
+    
+    Or press `i` in the Expo development server terminal.
+  </Step>
+</Steps>
+
+<Info>
+iOS simulators are only available on macOS. For Windows/Linux, use physical iOS devices with Expo Go or run on Android/web instead.
+</Info>
+
+## Running on Android Emulator
+
+<Steps>
+  <Step title="Install Android Studio">
+    Download from [developer.android.com/studio](https://developer.android.com/studio)
+  </Step>
+  
+  <Step title="Set Up Android SDK">
+    In Android Studio:
+    - Go to Settings → Appearance & Behavior → System Settings → Android SDK
+    - Install Android SDK Platform 34 (or latest)
+    - Install Android SDK Build-Tools
+  </Step>
+  
+  <Step title="Create Virtual Device">
+    - Open Android Studio → Virtual Device Manager
+    - Create a new virtual device (e.g., Pixel 6)
+    - Select a system image (e.g., Android 13)
+    - Start the emulator
+  </Step>
+  
+  <Step title="Run the App">
+    ```bash
+    npm run android
+    ```
+    
+    Or press `a` in the Expo development server terminal.
+  </Step>
+</Steps>
+
+### Android Environment Variables
+
+Add to your `~/.bashrc`, `~/.zshrc`, or equivalent:
+
+```bash
+export ANDROID_HOME=$HOME/Library/Android/sdk  # macOS
+# export ANDROID_HOME=$HOME/Android/Sdk        # Linux
+# export ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk  # Windows
+
+export PATH=$PATH:$ANDROID_HOME/emulator
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+```
+
+## Running on Web
+
+<Steps>
+  <Step title="Start Web Server">
+    ```bash
+    npm run web
+    ```
+    
+    Or press `w` in the Expo development server terminal.
+  </Step>
+  
+  <Step title="Open Browser">
+    The app will automatically open in your default browser at `http://localhost:8081`
+  </Step>
+</Steps>
+
+<Warning>
+Some React Native features may not work perfectly on web. Test thoroughly if you plan to deploy to web.
+</Warning>
+
+## Running on Physical Device
+
+### Using Expo Go App
+
+<Steps>
+  <Step title="Install Expo Go">
+    Download **Expo Go** from:
+    - iOS: [App Store](https://apps.apple.com/app/expo-go/id982107779)
+    - Android: [Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent)
+  </Step>
+  
+  <Step title="Start Development Server">
+    ```bash
+    npm start
+    ```
+  </Step>
+  
+  <Step title="Scan QR Code">
+    - **iOS**: Open Camera app → Scan QR code → Tap notification
+    - **Android**: Open Expo Go app → Scan QR code
+  </Step>
+</Steps>
+
+<Info>
+Your phone and development machine must be on the same Wi-Fi network.
+</Info>
+
+### Using Development Build
+
+For production-like testing with custom native code:
+
+```bash
+# Build for Android
+eas build --profile development --platform android
+
+# Build for iOS
+eas build --profile development --platform ios
+```
+
+## Hot Reload & Fast Refresh
+
+### Fast Refresh (Automatic)
+
+Expo automatically refreshes your app when you save files. React components retain their state during refresh.
+
+```typescript
+// Edit this file and save
+export default function MyComponent() {
+  return <Text>Updated instantly!</Text>;
+}
+// App updates without losing state
+```
+
+### Manual Reload
+
+If fast refresh doesn't work:
+
+<Tabs>
+  <Tab title="From Terminal">
+    Press `r` in the Expo dev server terminal
+  </Tab>
+  
+  <Tab title="From App">
+    - **iOS Simulator**: Cmd + D → Reload
+    - **Android Emulator**: Cmd/Ctrl + M → Reload
+    - **Physical Device**: Shake device → Reload
+  </Tab>
+</Tabs>
+
+## Debugging
+
+### Opening Dev Menu
+
+<CardGroup cols={3}>
+  <Card title="iOS Simulator">
+    Cmd + D
+  </Card>
+  <Card title="Android Emulator">
+    Cmd/Ctrl + M
+  </Card>
+  <Card title="Physical Device">
+    Shake device
+  </Card>
+</CardGroup>
+
+### Debug Tools
+
+<AccordionGroup>
+  <Accordion title="Console Logs">
+    Use `console.log()` - logs appear in the terminal where you ran `npm start`:
+    
+    ```typescript
+    console.log('User data:', user);
+    console.error('Error fetching books:', error);
+    console.warn('Deprecated API used');
+    ```
+  </Accordion>
+
+  <Accordion title="React Native Debugger">
+    Install standalone debugger for better DevTools:
+    
+    ```bash
+    # macOS
+    brew install react-native-debugger
+    
+    # Or download from:
+    # github.com/jhen0409/react-native-debugger/releases
+    ```
+    
+    Enable "Debug Remote JS" from dev menu.
+  </Accordion>
+
+  <Accordion title="Element Inspector">
+    From dev menu → "Show Element Inspector"
+    
+    - Tap elements to see their styles
+    - View component hierarchy
+    - Check layout properties
+  </Accordion>
+
+  <Accordion title="Network Requests">
+    Enable "Network Inspector" to see API calls:
+    
+    ```typescript
+    // View all axios requests in the inspector
+    const response = await api.get('/books/');
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Common Errors & Solutions
+
+<AccordionGroup>
+  <Accordion title="Port Already in Use">
+    **Error**: `Port 8081 already in use`
+    
+    **Solution**:
+    ```bash
+    # Kill process on port 8081
+    lsof -ti:8081 | xargs kill -9
+    
+    # Or start on different port
+    npx expo start --port 8082
+    ```
+  </Accordion>
+
+  <Accordion title="Metro Bundler Issues">
+    **Error**: `Unable to resolve module...`
+    
+    **Solution**:
+    ```bash
+    # Clear Metro cache
+    npx expo start -c
+    
+    # Or clear all caches
+    rm -rf node_modules
+    npm install
+    npx expo start -c
+    ```
+  </Accordion>
+
+  <Accordion title="Network Request Failed">
+    **Error**: API calls fail with network error
+    
+    **Solution**:
+    - Ensure backend is running on `http://localhost:8000`
+    - For physical devices, use your machine's IP instead of `localhost`:
+      
+      ```typescript api/axios.ts
+      const api = axios.create({
+        baseURL: "http://192.168.1.100:8000/api",  // Use your IP
+      });
+      ```
+    
+    - Check firewall settings
+  </Accordion>
+
+  <Accordion title="Android Build Failed">
+    **Error**: Build errors on Android
+    
+    **Solution**:
+    ```bash
+    # Clear Android build cache
+    cd android
+    ./gradlew clean
+    cd ..
+    
+    # Rebuild
+    npm run android
+    ```
+  </Accordion>
+
+  <Accordion title="iOS Build Failed">
+    **Error**: Build errors on iOS
+    
+    **Solution**:
+    ```bash
+    # Clear iOS build cache
+    cd ios
+    rm -rf Pods Podfile.lock
+    pod install
+    cd ..
+    
+    # Rebuild
+    npm run ios
+    ```
+  </Accordion>
+
+  <Accordion title="White Screen / Crash on Startup">
+    **Error**: App shows white screen or crashes immediately
+    
+    **Solution**:
+    1. Check console for error messages
+    2. Verify all dependencies are installed: `npm install`
+    3. Clear cache and restart: `npx expo start -c`
+    4. Check for syntax errors in recent changes
+    5. Verify backend API is accessible
+  </Accordion>
+
+  <Accordion title="Cannot Connect to Development Server">
+    **Error**: Device can't connect to dev server
+    
+    **Solution**:
+    - Ensure device and computer are on same Wi-Fi
+    - Disable VPN
+    - Try tunnel mode: `npx expo start --tunnel`
+    - Check firewall/antivirus settings
+  </Accordion>
+</AccordionGroup>
+
+## Environment Setup Checklist
+
+<Steps>
+  <Step title="Install Node.js">
+    Download from [nodejs.org](https://nodejs.org) (LTS version recommended)
+    
+    ```bash
+    node --version  # Should be v18+ or v20+
+    npm --version
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    cd appbiblioteca
+    npm install
+    ```
+  </Step>
+  
+  <Step title="Start Backend API">
+    Ensure your Django backend is running on `http://localhost:8000`
+  </Step>
+  
+  <Step title="Start Development Server">
+    ```bash
+    npm start
+    ```
+  </Step>
+  
+  <Step title="Choose Platform">
+    - Press `a` for Android
+    - Press `i` for iOS (macOS only)
+    - Press `w` for Web
+    - Scan QR code with Expo Go on physical device
+  </Step>
+</Steps>
+
+## Tips for Faster Development
+
+<CardGroup cols={2}>
+  <Card title="Use Fast Refresh" icon="bolt">
+    Save files to see changes instantly without losing state
+  </Card>
+  
+  <Card title="Keep Logs Open" icon="terminal">
+    Monitor the terminal for errors and console.log output
+  </Card>
+  
+  <Card title="Use Dev Menu" icon="bars">
+    Access debugging tools quickly with Cmd+D (iOS) or Cmd+M (Android)
+  </Card>
+  
+  <Card title="Test on Real Devices" icon="mobile">
+    Use Expo Go for quick testing on physical devices
+  </Card>
+</CardGroup>

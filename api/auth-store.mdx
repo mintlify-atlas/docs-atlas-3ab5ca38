@@ -1,0 +1,252 @@
+---
+title: "useAuthStore"
+description: "Zustand store for managing authentication state in AppBiblioteca"
+---
+
+## Overview
+
+The `useAuthStore` is a Zustand-based global state store that manages authentication state throughout the AppBiblioteca application. It handles user data, JWT tokens, and provides methods for login, logout, and initialization.
+
+## Store Location
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+```
+
+**File:** `store/useAuthStore.ts`
+
+## State Properties
+
+<ParamField path="user" type="User | null">
+  The currently authenticated user object, or `null` if not logged in.
+  
+  ```typescript
+  interface User {
+    id: number;
+    username: string;
+    email?: string;
+  }
+  ```
+</ParamField>
+
+<ParamField path="token" type="string | null">
+  The JWT access token for authenticating API requests. Stored in SecureStore and automatically added to API requests via Axios interceptors.
+</ParamField>
+
+<ParamField path="refresh" type="string | null">
+  The JWT refresh token used to obtain new access tokens when they expire.
+</ParamField>
+
+<ParamField path="isLoading" type="boolean">
+  Loading state indicator. Starts as `true` during app initialization and becomes `false` after checking for stored tokens. Used to prevent navigation until auth state is determined.
+</ParamField>
+
+## Methods
+
+### login()
+
+Logs in a user by storing tokens in SecureStore and updating the auth state.
+
+<ParamField path="token" type="string" required>
+  The JWT access token received from the authentication API.
+</ParamField>
+
+<ParamField path="refresh" type="string" required>
+  The JWT refresh token for obtaining new access tokens.
+</ParamField>
+
+<ParamField path="userData" type="User | null" required>
+  The user object containing user details (id, username, email).
+</ParamField>
+
+<ParamField path="isLoading" type="boolean" required>
+  Loading state flag (typically set to `false` after login).
+</ParamField>
+
+**Returns:** `Promise<void>`
+
+**Implementation:**
+
+```typescript
+login: async (token, refresh, userData) => {
+  await SecureStore.setItemAsync("userToken", token);
+  await SecureStore.setItemAsync("refreshToken", refresh);
+  set({ token, refresh, user: userData, isLoading: false });
+}
+```
+
+**Example Usage:**
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+
+// In a component
+const login = useAuthStore((state) => state.login);
+
+const handleLogin = async () => {
+  const { data } = await api.post("/token/", { username, password });
+  const { access, refresh, user } = data;
+  await login(access, refresh, user || { id: 1, username }, false);
+};
+```
+
+### logout()
+
+Logs out the user by removing tokens from SecureStore and resetting the auth state.
+
+**Returns:** `Promise<void>`
+
+**Implementation:**
+
+```typescript
+logout: async () => {
+  await SecureStore.deleteItemAsync("userToken");
+  await SecureStore.deleteItemAsync("refreshToken");
+  set({ token: null, refresh: null, user: null, isLoading: false });
+}
+```
+
+**Example Usage:**
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+
+// In a component
+const logout = useAuthStore((state) => state.logout);
+
+const handleLogout = async () => {
+  await logout();
+  router.replace("/(auth)/login");
+};
+```
+
+### initialize()
+
+Initializes the auth state by checking for stored tokens in SecureStore. Called once on app startup to restore authenticated sessions.
+
+**Returns:** `Promise<void>`
+
+**Implementation:**
+
+```typescript
+initialize: async () => {
+  try {
+    const token = await SecureStore.getItemAsync("userToken");
+    set({ token, isLoading: false });
+  } catch (error) {
+    console.error("Error cargando el token:", error);
+    set({ isLoading: false });
+  }
+}
+```
+
+**Example Usage:**
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+import { useEffect } from "react";
+
+// In root layout (_layout.tsx)
+const initialize = useAuthStore((state) => state.initialize);
+
+useEffect(() => {
+  initialize();
+}, []);
+```
+
+## Complete Store Implementation
+
+```typescript store/useAuthStore.ts
+import { create } from "zustand";
+import * as SecureStore from "expo-secure-store";
+import { AuthState } from "@/types/auth";
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  token: null,
+  refresh: null,
+  isLoading: true,
+
+  login: async (token, refresh, userData) => {
+    await SecureStore.setItemAsync("userToken", token);
+    await SecureStore.setItemAsync("refreshToken", refresh);
+    set({ token, refresh, user: userData, isLoading: false });
+  },
+
+  logout: async () => {
+    await SecureStore.deleteItemAsync("userToken");
+    await SecureStore.deleteItemAsync("refreshToken");
+    set({ token: null, refresh: null, user: null, isLoading: false });
+  },
+
+  initialize: async () => {
+    try {
+      const token = await SecureStore.getItemAsync("userToken");
+      set({ token, isLoading: false });
+    } catch (error) {
+      console.error("Error cargando el token:", error);
+      set({ isLoading: false });
+    }
+  },
+}));
+```
+
+## Usage Patterns
+
+### Accessing State in Components
+
+```typescript
+// Access single value
+const token = useAuthStore((state) => state.token);
+
+// Access multiple values
+const { user, isLoading } = useAuthStore((state) => ({
+  user: state.user,
+  isLoading: state.isLoading,
+}));
+
+// Access methods
+const login = useAuthStore((state) => state.login);
+const logout = useAuthStore((state) => state.logout);
+```
+
+### Accessing Outside React Components
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+
+// Get current state
+const state = useAuthStore.getState();
+const currentToken = state.token;
+
+// Call methods
+const { logout } = useAuthStore.getState();
+await logout();
+```
+
+## Type Definitions
+
+See [Auth Types](/api/auth-types) for complete TypeScript type definitions including `User`, `LoginResponse`, and `AuthState` interfaces.
+
+## Security
+
+- **Secure Storage**: Tokens are stored using `expo-secure-store`, which uses iOS Keychain and Android Keystore for encrypted storage.
+- **Automatic Token Refresh**: The Axios client automatically refreshes expired tokens using the refresh token.
+- **No Plain Text Storage**: Tokens are never stored in AsyncStorage or plain text.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Authentication Concepts" icon="shield-halved" href="/concepts/authentication">
+    Learn how authentication works in AppBiblioteca
+  </Card>
+  <Card title="API Client" icon="plug" href="/api/axios-client">
+    Explore the Axios client configuration
+  </Card>
+  <Card title="Auth Types" icon="brackets-curly" href="/api/auth-types">
+    View TypeScript type definitions
+  </Card>
+  <Card title="Login Screen" icon="right-to-bracket" href="/features/authentication-flow">
+    See how login is implemented
+  </Card>
+</CardGroup>

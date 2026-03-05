@@ -1,0 +1,307 @@
+---
+title: "Authentication Types"
+description: "TypeScript type definitions for authentication in AppBiblioteca"
+---
+
+## Overview
+
+AppBiblioteca uses TypeScript interfaces to ensure type safety across authentication-related code. All authentication types are defined in `types/auth.ts`.
+
+## Type Location
+
+```typescript
+import { User, LoginResponse, AuthState } from "@/types/auth";
+```
+
+**File:** `types/auth.ts`
+
+## User Interface
+
+Represents a user in the application.
+
+```typescript
+export interface User {
+  id: number;
+  username: string;
+  email?: string;
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="number" required>
+  Unique identifier for the user.
+</ResponseField>
+
+<ResponseField name="username" type="string" required>
+  The user's username used for login and display.
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  The user's email address. Optional field that may or may not be provided by the backend.
+</ResponseField>
+
+### Usage Example
+
+```typescript
+import { User } from "@/types/auth";
+
+const currentUser: User = {
+  id: 1,
+  username: "johndoe",
+  email: "john@example.com"
+};
+```
+
+## LoginResponse Interface
+
+Represents the response from the login API endpoint.
+
+```typescript
+export interface LoginResponse {
+  access: string;
+  refresh: string;
+  user?: User;
+}
+```
+
+### Fields
+
+<ResponseField name="access" type="string" required>
+  The JWT access token used for authenticating API requests. Short-lived token that expires after a set period.
+</ResponseField>
+
+<ResponseField name="refresh" type="string" required>
+  The JWT refresh token used to obtain new access tokens when they expire. Longer-lived token stored securely.
+</ResponseField>
+
+<ResponseField name="user" type="User">
+  Optional user object containing user details. May or may not be included depending on backend configuration.
+</ResponseField>
+
+### Usage Example
+
+```typescript
+import api from "@/api/axios";
+import { LoginResponse } from "@/types/auth";
+
+const handleLogin = async (username: string, password: string) => {
+  const { data } = await api.post<LoginResponse>("/token/", {
+    username,
+    password,
+  });
+  
+  const { access, refresh, user } = data;
+  console.log("Access token:", access);
+  console.log("Refresh token:", refresh);
+  console.log("User:", user);
+};
+```
+
+## AuthState Interface
+
+Defines the shape of the authentication state managed by Zustand.
+
+```typescript
+export interface AuthState {
+  user: User | null;
+  token: string | null;
+  refresh: string | null;
+  isLoading: boolean;
+  login: (
+    token: string,
+    refresh: string,
+    userData: User | null,
+    isLoading: boolean,
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+  initialize: () => Promise<void>;
+}
+```
+
+### State Properties
+
+<ResponseField name="user" type="User | null">
+  The currently authenticated user, or `null` if not logged in.
+</ResponseField>
+
+<ResponseField name="token" type="string | null">
+  The JWT access token, or `null` if not authenticated.
+</ResponseField>
+
+<ResponseField name="refresh" type="string | null">
+  The JWT refresh token, or `null` if not authenticated.
+</ResponseField>
+
+<ResponseField name="isLoading" type="boolean">
+  Loading state indicator. `true` during initialization, `false` once auth state is determined.
+</ResponseField>
+
+### Methods
+
+<ResponseField name="login" type="(token: string, refresh: string, userData: User | null, isLoading: boolean) => Promise<void>">
+  Method to log in a user by storing tokens and updating state.
+  
+  <Expandable title="Parameters">
+    <ResponseField name="token" type="string">
+      The JWT access token
+    </ResponseField>
+    <ResponseField name="refresh" type="string">
+      The JWT refresh token
+    </ResponseField>
+    <ResponseField name="userData" type="User | null">
+      User object or null
+    </ResponseField>
+    <ResponseField name="isLoading" type="boolean">
+      Loading state flag
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="logout" type="() => Promise<void>">
+  Method to log out the user by clearing tokens and resetting state.
+</ResponseField>
+
+<ResponseField name="initialize" type="() => Promise<void>">
+  Method to initialize auth state by checking for stored tokens.
+</ResponseField>
+
+### Usage Example
+
+```typescript
+import { create } from "zustand";
+import { AuthState } from "@/types/auth";
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  token: null,
+  refresh: null,
+  isLoading: true,
+  
+  login: async (token, refresh, userData) => {
+    // Implementation
+  },
+  
+  logout: async () => {
+    // Implementation
+  },
+  
+  initialize: async () => {
+    // Implementation
+  },
+}));
+```
+
+## Complete Type Definitions
+
+```typescript types/auth.ts
+export interface User {
+  id: number;
+  username: string;
+  email?: string;
+}
+
+export interface LoginResponse {
+  access: string;
+  refresh: string;
+  user?: User;
+}
+
+export interface AuthState {
+  user: User | null;
+  token: string | null;
+  refresh: string | null;
+  isLoading: boolean;
+  login: (
+    token: string,
+    refresh: string,
+    userData: User | null,
+    isLoading: boolean,
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+  initialize: () => Promise<void>;
+}
+```
+
+## Type Usage in Components
+
+### Typing API Responses
+
+```typescript
+import api from "@/api/axios";
+import { LoginResponse } from "@/types/auth";
+
+const login = async () => {
+  // TypeScript knows the shape of response.data
+  const response = await api.post<LoginResponse>("/token/", {
+    username,
+    password
+  });
+  
+  const { access, refresh, user } = response.data; // All typed correctly
+};
+```
+
+### Typing Store Selectors
+
+```typescript
+import { useAuthStore } from "@/store/useAuthStore";
+import { User } from "@/types/auth";
+
+// TypeScript infers the correct type
+const user: User | null = useAuthStore((state) => state.user);
+const isLoading: boolean = useAuthStore((state) => state.isLoading);
+```
+
+### Typing Component Props
+
+```typescript
+import { User } from "@/types/auth";
+
+interface ProfileProps {
+  user: User;
+}
+
+const ProfileScreen: React.FC<ProfileProps> = ({ user }) => {
+  return (
+    <View>
+      <Text>{user.username}</Text>
+      <Text>{user.email}</Text>
+    </View>
+  );
+};
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Always type API responses" icon="code">
+    Use generic types with Axios to ensure response data is properly typed.
+  </Card>
+  <Card title="Use optional fields" icon="question">
+    Mark fields as optional (`?`) when they may not always be present in the response.
+  </Card>
+  <Card title="Null safety" icon="shield-halved">
+    Use union types with `null` (e.g., `User | null`) for values that can be absent.
+  </Card>
+  <Card title="Type your state" icon="database">
+    Always provide type parameters when creating Zustand stores.
+  </Card>
+</CardGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Auth Store" icon="database" href="/api/auth-store">
+    See how these types are used in the auth store
+  </Card>
+  <Card title="API Client" icon="plug" href="/api/axios-client">
+    Learn about typed API requests
+  </Card>
+  <Card title="Authentication Concepts" icon="shield-halved" href="/concepts/authentication">
+    Understand the authentication system
+  </Card>
+  <Card title="TypeScript Guide" icon="code" href="/development/project-structure">
+    Learn about TypeScript in the project
+  </Card>
+</CardGroup>

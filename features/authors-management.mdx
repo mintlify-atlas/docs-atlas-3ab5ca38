@@ -1,0 +1,324 @@
+---
+title: Authors Management
+description: Manage and browse authors in AppBiblioteca with a clean, efficient interface
+---
+
+## Overview
+
+The Authors Management feature provides a comprehensive view of all authors in your library. Authors are displayed in a scrollable list with options to view their books and manage author information.
+
+## Data Structure
+
+Authors in AppBiblioteca use a simple, focused data structure:
+
+```typescript
+interface Author {
+  id: number;
+  name: string;
+}
+```
+
+**Source:** `app/(main)/(tabs)/authors.tsx:13-16`
+
+## Viewing Authors List
+
+The authors list provides a clean, scrollable interface for browsing all authors in your library.
+
+### Implementation
+
+```typescript
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  StatusBar,
+  TouchableOpacity,
+} from "react-native";
+import api from "@/api/axios";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+
+export default function Authors() {
+  const [authors, setAuthors] = useState<Author[]>([]);
+
+  useEffect(() => {
+    try {
+      api.get("/authors/").then((response) => {
+        setAuthors(response.data);
+      });
+    } catch (error) {
+      console.log("Error fetching authors =>", error);
+    }
+  }, []);
+
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <Text>Lista de autores</Text>
+        <FlatList
+          data={authors}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => <Item name={item.name} />}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
+}
+```
+
+**Source:** `app/(main)/(tabs)/authors.tsx:29-53`
+
+### Key Components
+
+<CardGroup cols={2}>
+  <Card title="SafeAreaView" icon="mobile">
+    Ensures content is displayed within safe area boundaries, avoiding notches and system UI
+  </Card>
+  <Card title="FlatList" icon="list">
+    Efficiently renders large lists with virtualization for optimal performance
+  </Card>
+  <Card title="useState Hook" icon="code">
+    Manages local state for authors data fetched from the API
+  </Card>
+  <Card title="useEffect Hook" icon="rotate">
+    Handles side effects like data fetching when component mounts
+  </Card>
+</CardGroup>
+
+## API Integration
+
+Authors are fetched from the backend API with automatic authentication.
+
+### Endpoint
+
+```
+GET /api/authors/
+```
+
+### Response Format
+
+```json
+[
+  {
+    "id": 1,
+    "name": "F. Scott Fitzgerald"
+  },
+  {
+    "id": 2,
+    "name": "Harper Lee"
+  },
+  {
+    "id": 3,
+    "name": "George Orwell"
+  }
+]
+```
+
+### Data Fetching
+
+The component fetches authors automatically on mount:
+
+```typescript
+useEffect(() => {
+  try {
+    api.get("/authors/").then((response) => {
+      setAuthors(response.data);
+    });
+  } catch (error) {
+    console.log("Error fetching authors =>", error);
+  }
+}, []);
+```
+
+**Source:** `app/(main)/(tabs)/authors.tsx:32-40`
+
+<Note>
+The API client automatically includes authentication headers via axios interceptors. See the [Authentication Flow](/features/authentication-flow) documentation for details.
+</Note>
+
+## Author List Item Component
+
+Each author is rendered with a custom component that displays the author's name and provides quick access to their books:
+
+```typescript
+type ItemProps = { name: string };
+
+const Item = ({ name }: ItemProps) => (
+  <View style={styles.item}>
+    <Text style={styles.title}>{name}</Text>
+    <TouchableOpacity style={{ marginLeft: "auto" }}>
+      <Text style={{ color: "white" }}>Ver Libros</Text>
+    </TouchableOpacity>
+  </View>
+);
+```
+
+**Source:** `app/(main)/(tabs)/authors.tsx:18-27`
+
+### Item Features
+
+- **Author Name Display**: Large, readable text for the author's name
+- **Action Button**: "Ver Libros" (View Books) button for quick access to the author's works
+- **Flex Layout**: Responsive layout with the button aligned to the right
+
+## UI Components and Styling
+
+The authors list features a clean, modern design with consistent styling.
+
+### Container Styles
+
+```typescript
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    marginTop: StatusBar.currentHeight || 0,
+  },
+  item: {
+    display: "flex",
+    flexDirection: "row",
+    backgroundColor: "#3eb3f2",
+    padding: 20,
+    marginVertical: 8,
+    marginHorizontal: 16,
+    borderRadius: 8,
+  },
+  title: {
+    fontSize: 32,
+  },
+});
+```
+
+**Source:** `app/(main)/(tabs)/authors.tsx:56-73`
+
+### Design Highlights
+
+<Steps>
+  <Step title="Container Layout">
+    Uses flexbox with full height and accounts for device status bar
+  </Step>
+  <Step title="Card-Based Items">
+    Each author appears in a rounded card with consistent padding and margins
+  </Step>
+  <Step title="Brand Colors">
+    Uses the app's primary color (#3eb3f2) for a cohesive visual experience
+  </Step>
+  <Step title="Responsive Spacing">
+    Vertical and horizontal margins create comfortable spacing between items
+  </Step>
+</Steps>
+
+## Safe Area Handling
+
+The component uses React Native Safe Area Context to ensure proper rendering on devices with notches, rounded corners, or other screen cutouts:
+
+```typescript
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+
+return (
+  <SafeAreaProvider>
+    <SafeAreaView style={styles.container}>
+      {/* Content */}
+    </SafeAreaView>
+  </SafeAreaProvider>
+);
+```
+
+**Source:** `app/(main)/(tabs)/authors.tsx:43-52`
+
+<Info>
+`SafeAreaView` automatically adjusts padding to avoid overlapping with device-specific UI elements like the notch on iPhone X and newer models.
+</Info>
+
+## Error Handling
+
+Basic error handling is implemented for API failures:
+
+```typescript
+try {
+  api.get("/authors/").then((response) => {
+    setAuthors(response.data);
+  });
+} catch (error) {
+  console.log("Error fetching authors =>", error);
+}
+```
+
+Current error handling logs errors to the console. Consider enhancing with:
+
+- User-friendly error messages
+- Toast notifications for network errors
+- Retry mechanisms
+- Offline support with cached data
+- Loading states during data fetching
+
+## Performance Considerations
+
+### FlatList Optimization
+
+The component uses `FlatList` for optimal performance:
+
+```typescript
+<FlatList
+  data={authors}
+  keyExtractor={(item) => item.id.toString()}
+  renderItem={({ item }) => <Item name={item.name} />}
+/>
+```
+
+**Benefits:**
+
+- **Virtualization**: Only renders visible items plus a small buffer
+- **Memory Efficiency**: Recycles components as users scroll
+- **Smooth Scrolling**: Optimized for large datasets
+- **Unique Keys**: Uses author IDs for efficient re-rendering
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Data Management">
+    - Implement pagination for libraries with many authors
+    - Cache author data to reduce API calls
+    - Add pull-to-refresh functionality
+    - Consider implementing search and filtering
+  </Accordion>
+
+  <Accordion title="User Experience">
+    - Show loading indicators during data fetch
+    - Display empty state when no authors exist
+    - Add skeleton screens for better perceived performance
+    - Implement alphabetical sorting or grouping
+  </Accordion>
+
+  <Accordion title="Navigation">
+    - Make the "Ver Libros" button functional to navigate to author's books
+    - Add author detail page with biography and full book list
+    - Implement deep linking for sharing authors
+    - Add breadcrumb navigation
+  </Accordion>
+
+  <Accordion title="Accessibility">
+    - Add accessibility labels to touchable elements
+    - Ensure sufficient color contrast
+    - Support dynamic font sizing
+    - Provide screen reader support
+  </Accordion>
+</AccordionGroup>
+
+## Future Enhancements
+
+Consider these improvements for the authors feature:
+
+- Author profile pictures/avatars
+- Biography and metadata fields
+- Book count per author
+- Author search and filtering
+- Sorting options (alphabetical, most books, etc.)
+- Add/edit author functionality
+- Integration with external author databases
+
+## Related Features
+
+- [Books Management](/features/books-management) - Manage books by these authors
+- [Authentication Flow](/features/authentication-flow) - Required for API access
+- [API Reference](/api/auth-store) - Complete API documentation

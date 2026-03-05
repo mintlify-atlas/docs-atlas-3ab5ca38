@@ -1,80 +1,215 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get up and running with AppBiblioteca in under 5 minutes"
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+Before you begin, ensure you have the following installed:
 
-### Step 1: Set up your local environment
+- **Node.js** (version 18 or higher)
+- **npm** or **yarn** package manager
+- **Expo CLI** (optional but recommended)
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Info>
+  If you don't have Expo CLI installed globally, you can use `npx expo` commands instead.
+</Info>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the AppBiblioteca repository to your local machine.
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```bash
+    git clone https://github.com/ederjuarez/biblioteca_frontend-.git
+    cd biblioteca_frontend-
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    Install all required packages using npm or yarn.
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    <CodeGroup>
+    ```bash npm
+    npm install
+    ```
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash yarn
+    yarn install
+    ```
+    </CodeGroup>
+    
+    This will install all dependencies including:
+    - React Native and Expo
+    - Expo Router for navigation
+    - Axios for API calls
+    - Zustand for state management
+    - expo-secure-store for token storage
+  </Step>
+  
+  <Step title="Configure the API endpoint">
+    Update the API base URL in `api/axios.ts` to point to your backend server.
+    
+    ```typescript api/axios.ts
+    const api = axios.create({
+      baseURL: "http://localhost:8000/api", // Change this to your API URL
+    });
+    ```
+    
+    <Accordion title="Platform-specific API URLs">
+      - **iOS Simulator**: `http://localhost:8000/api`
+      - **Android Emulator**: `http://10.0.2.2:8000/api` (Android maps localhost differently)
+      - **Physical Device**: `http://YOUR_COMPUTER_IP:8000/api` (e.g., `http://192.168.1.100:8000/api`)
+      - **Production**: `https://api.yourdomain.com`
+    </Accordion>
+  </Step>
+  
+  <Step title="Start the development server">
+    Launch the Expo development server.
+    
+    ```bash
+    npx expo start
+    ```
+    
+    Or if you have Expo CLI installed globally:
+    
+    ```bash
+    npm start
+    ```
+    
+    This will start the Metro bundler and display a QR code in your terminal.
+  </Step>
+  
+  <Step title="Run on your platform">
+    Choose how you want to run the app:
+    
+    <Tabs>
+      <Tab title="Web">
+        Press `w` in the terminal or run:
+        ```bash
+        npx expo start --web
+        ```
+      </Tab>
+      
+      <Tab title="iOS">
+        Press `i` in the terminal or run:
+        ```bash
+        npx expo start --ios
+        ```
+        
+        <Note>Requires macOS with Xcode installed</Note>
+      </Tab>
+      
+      <Tab title="Android">
+        Press `a` in the terminal or run:
+        ```bash
+        npx expo start --android
+        ```
+        
+        <Note>Requires Android Studio with an emulator or connected device</Note>
+      </Tab>
+      
+      <Tab title="Physical Device">
+        1. Install **Expo Go** from the App Store (iOS) or Google Play (Android)
+        2. Scan the QR code displayed in your terminal
+        3. The app will open in Expo Go
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## First Login
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Once the app is running:
 
-### Step 3: Go live
+1. You'll see the **login screen** as the initial view
+2. Enter your credentials (username and password)
+3. The app will authenticate with your backend API at `/api/token/`
+4. Upon successful login, you'll be redirected to the **profile page**
+5. Use the bottom tab navigation to explore:
+   - **Home**: Main dashboard
+   - **Books**: View and manage books
+   - **Authors**: View and manage authors
+   - **Users**: View users (if you have admin access)
+   - **Profile**: Your user profile and logout
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<Tip>
+  Make sure your backend API is running and accessible before attempting to log in.
+</Tip>
 
-## Next steps
-
-Now that you have your docs running, explore these key features:
+## What's Next?
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Explore the Architecture" icon="diagram-project" href="/concepts/architecture">
+    Learn about the app's structure and design patterns
+  </Card>
+  <Card title="Authentication System" icon="shield-halved" href="/concepts/authentication">
+    Understand how JWT authentication works
+  </Card>
+  <Card title="Manage Books" icon="book" href="/features/books-management">
+    Learn how to work with the books feature
+  </Card>
+  <Card title="API Integration" icon="plug" href="/development/api-integration">
+    Deep dive into API calls and interceptors
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Common Commands
+
+Here are the most frequently used commands:
+
+| Command | Description |
+|---------|-------------|
+| `npm start` | Start the development server |
+| `npm run android` | Run on Android emulator |
+| `npm run ios` | Run on iOS simulator |
+| `npm run web` | Run in web browser |
+| `npm run lint` | Run ESLint to check code quality |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port already in use">
+    If port 8081 is already in use, kill the process:
+    
+    ```bash
+    # macOS/Linux
+    lsof -ti:8081 | xargs kill -9
+    
+    # Windows
+    netstat -ano | findstr :8081
+    taskkill /PID <PID> /F
+    ```
+  </Accordion>
+  
+  <Accordion title="Unable to connect to API">
+    - Verify your backend server is running
+    - Check the API base URL in `api/axios.ts`
+    - For Android emulator, use `http://10.0.2.2:8000/api` instead of `localhost`
+    - For physical devices, use your computer's IP address
+  </Accordion>
+  
+  <Accordion title="Metro bundler won't start">
+    Clear the cache and restart:
+    
+    ```bash
+    npx expo start --clear
+    ```
+  </Accordion>
+  
+  <Accordion title="Module not found errors">
+    Delete node_modules and reinstall:
+    
+    ```bash
+    rm -rf node_modules
+    npm install
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Need Help?
+
+<Card title="View Full Installation Guide" icon="book-open" href="/installation">
+  For detailed installation instructions including platform-specific setup, see the complete installation guide.
+</Card>

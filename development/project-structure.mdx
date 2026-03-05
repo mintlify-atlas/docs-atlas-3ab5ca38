@@ -1,0 +1,197 @@
+---
+title: 'Project Structure'
+description: 'Understanding the AppBiblioteca project organization and directory layout'
+---
+
+## Overview
+
+AppBiblioteca follows a well-organized structure typical of Expo Router applications, with clear separation of concerns across different directories.
+
+## Directory Layout
+
+```
+appbiblioteca/
+├── app/                    # Main application code (Expo Router)
+│   ├── (auth)/            # Authentication routes
+│   │   ├── login.tsx      # Login screen
+│   │   ├── register.tsx   # Registration screen
+│   │   └── _layout.tsx    # Auth layout
+│   ├── (main)/            # Main app routes (protected)
+│   │   ├── (tabs)/        # Tab navigation screens
+│   │   │   ├── index.tsx      # Home tab
+│   │   │   ├── books.tsx      # Books list
+│   │   │   ├── authors.tsx    # Authors list
+│   │   │   ├── users.tsx      # Users management
+│   │   │   ├── profile.tsx    # User profile
+│   │   │   └── _layout.tsx    # Tabs layout
+│   │   ├── add_book.tsx   # Add book screen
+│   │   └── _layout.tsx    # Main layout
+│   └── _layout.tsx        # Root layout
+├── api/                   # API client configuration
+│   └── axios.ts          # Axios instance with interceptors
+├── store/                # State management (Zustand)
+│   └── useAuthStore.ts   # Authentication state
+├── types/                # TypeScript type definitions
+│   └── auth.ts           # Auth-related types
+├── assets/               # Static assets
+│   └── images/           # Image files
+└── package.json          # Dependencies and scripts
+```
+
+## Key Directories
+
+### app/ Directory
+
+The `app/` directory uses **Expo Router** for file-based routing. Each file represents a route in your application.
+
+<Info>
+Folders wrapped in parentheses like `(auth)` and `(main)` are **layout groups** - they organize routes without affecting the URL path.
+</Info>
+
+#### Authentication Routes (`app/(auth)/`)
+
+Contains all authentication-related screens:
+- `login.tsx` - User login form
+- `register.tsx` - User registration
+- `_layout.tsx` - Shared layout for auth screens
+
+#### Main App Routes (`app/(main)/`)
+
+Protected routes accessible only after authentication:
+- `(tabs)/` - Tab-based navigation for main features
+- `add_book.tsx` - Modal/screen for adding new books
+- `_layout.tsx` - Main app layout with navigation
+
+#### Tab Screens (`app/(main)/(tabs)/`)
+
+The core tab navigation screens:
+- `index.tsx` - Home/Dashboard
+- `books.tsx` - Browse and manage books
+- `authors.tsx` - Browse and manage authors
+- `users.tsx` - User management (admin)
+- `profile.tsx` - Current user profile
+- `_layout.tsx` - Tab bar configuration
+
+### api/ Directory
+
+Contains API client configuration and setup:
+- `axios.ts` - Pre-configured Axios instance with base URL, request/response interceptors, and authentication token handling
+
+<Tip>
+All API calls should use the configured `api` instance from `@/api/axios` to ensure proper authentication and token refresh.
+</Tip>
+
+### store/ Directory
+
+State management using **Zustand**:
+- `useAuthStore.ts` - Global authentication state including user data, tokens, and auth methods (login, logout, initialize)
+
+### types/ Directory
+
+TypeScript type definitions:
+- `auth.ts` - Authentication-related interfaces (User, LoginResponse, AuthState)
+
+## File Naming Conventions
+
+<AccordionGroup>
+  <Accordion title="Route Files">
+    - Use lowercase with hyphens for multi-word routes: `add-book.tsx`
+    - Use `_layout.tsx` for layout components
+    - Use `index.tsx` for the default route in a directory
+  </Accordion>
+
+  <Accordion title="Component Files">
+    - Use PascalCase for component files: `BookCard.tsx`
+    - Place reusable components in a `components/` directory (not yet created)
+  </Accordion>
+
+  <Accordion title="Store Files">
+    - Prefix with `use` for Zustand stores: `useAuthStore.ts`, `useBooksStore.ts`
+    - One store per file for better organization
+  </Accordion>
+
+  <Accordion title="Type Files">
+    - Use lowercase singular nouns: `auth.ts`, `book.ts`, `author.ts`
+    - Group related types in the same file
+  </Accordion>
+</AccordionGroup>
+
+## Where to Add New Features
+
+<Steps>
+  <Step title="Define Types">
+    Create or update type definitions in `types/`:
+    
+    ```typescript types/book.ts
+    export interface Book {
+      id: number;
+      title: string;
+      author_id: number;
+      published_date: string;
+    }
+    ```
+  </Step>
+
+  <Step title="Create State Management (Optional)">
+    If you need global state, create a Zustand store in `store/`:
+    
+    ```typescript store/useBooksStore.ts
+    import { create } from 'zustand';
+    import { Book } from '@/types/book';
+
+    interface BooksState {
+      books: Book[];
+      setBooks: (books: Book[]) => void;
+    }
+
+    export const useBooksStore = create<BooksState>((set) => ({
+      books: [],
+      setBooks: (books) => set({ books }),
+    }));
+    ```
+  </Step>
+
+  <Step title="Add Route/Screen">
+    Create a new screen file in the appropriate directory:
+    
+    - For a new tab: `app/(main)/(tabs)/new-tab.tsx`
+    - For a modal/detail screen: `app/(main)/book-detail.tsx`
+    - For an auth screen: `app/(auth)/forgot-password.tsx`
+  </Step>
+
+  <Step title="Update Layout (if needed)">
+    Update the relevant `_layout.tsx` to include your new route in navigation:
+    
+    ```typescript app/(main)/(tabs)/_layout.tsx
+    <Tabs.Screen
+      name="new-tab"
+      options={{
+        title: 'New Tab',
+        tabBarIcon: ({ color }) => <Icon name="star" color={color} />,
+      }}
+    />
+    ```
+  </Step>
+</Steps>
+
+## Path Aliases
+
+The project uses `@/` as a path alias for the root directory:
+
+```typescript
+import api from '@/api/axios';           // Instead of '../../../api/axios'
+import { useAuthStore } from '@/store/useAuthStore';
+import { User } from '@/types/auth';
+```
+
+<Warning>
+Always use the `@/` alias for imports to maintain clean, maintainable code that's resilient to file moves.
+</Warning>
+
+## Best Practices
+
+1. **Keep routes simple** - Complex logic should be in separate hooks or utilities
+2. **Use TypeScript** - Always define interfaces for data structures
+3. **Organize by feature** - Related files should be close together
+4. **Follow the pattern** - Look at existing files (like `books.tsx` or `authors.tsx`) as templates
+5. **Use Expo Router conventions** - Leverage `_layout.tsx` files for shared navigation and UI

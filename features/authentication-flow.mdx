@@ -1,0 +1,618 @@
+---
+title: Authentication Flow
+description: Complete guide to authentication, login, registration, and session management in AppBiblioteca
+---
+
+## Overview
+
+AppBiblioteca implements a JWT-based authentication system with secure token storage, automatic token refresh, and persistent sessions. The authentication flow uses access and refresh tokens to maintain secure user sessions.
+
+## Authentication Architecture
+
+<Steps>
+  <Step title="User Login">
+    User enters credentials (username and password)
+  </Step>
+  <Step title="Token Generation">
+    Backend validates credentials and returns access + refresh tokens
+  </Step>
+  <Step title="Secure Storage">
+    Tokens are stored in device's secure storage (Keychain/KeyStore)
+  </Step>
+  <Step title="Automatic Injection">
+    Access token is automatically added to all API requests
+  </Step>
+  <Step title="Token Refresh">
+    When access token expires, refresh token is used to get new access token
+  </Step>
+  <Step title="Session Persistence">
+    User remains logged in across app restarts until explicit logout
+  </Step>
+</Steps>
+
+## Data Structures
+
+### User Interface
+
+```typescript
+interface User {
+  id: number;
+  username: string;
+  email?: string;
+}
+```
+
+**Source:** `types/auth.ts:1-5`
+
+### Login Response
+
+```typescript
+interface LoginResponse {
+  access: string;
+  refresh: string;
+  user?: User; // Optional, depending on backend implementation
+}
+```
+
+**Source:** `types/auth.ts:7-11`
+
+### Auth State
+
+```typescript
+interface AuthState {
+  user: User | null;
+  token: string | null;
+  refresh: string | null;
+  isLoading: boolean;
+  login: (
+    token: string,
+    refresh: string,
+    userData: User | null,
+    isLoading: boolean,
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+  initialize: () => Promise<void>;
+}
+```
+
+**Source:** `types/auth.ts:13-26`
+
+## Login Process
+
+The login screen handles user authentication and redirects to the main app upon success.
+
+### Implementation
+
+```typescript
+import React, { useState } from "react";
+import { View, Text, TextInput, Button, Alert } from "react-native";
+import { useRouter } from "expo-router";
+import api from "@/api/axios";
+import { useAuthStore } from "@/store/useAuthStore";
+import { LoginResponse } from "@/types/auth";
+
+export default function Login() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const login = useAuthStore((state) => state.login);
+  const router = useRouter();
+
+  const handleLogin = async () => {
+    try {
+      const { data } = await api.post<LoginResponse>("/token/", {
+        username,
+        password,
+      });
+      console.log("Autenticación exitosa =>", data);
+      const { access, refresh, user } = data;
+      await login(access, refresh, user || { id: 1, username }, true);
+      router.replace("/(main)/profile");
+    } catch (error) {
+      console.log(error);
+      Alert.alert(
+        "Error",
+        "Credenciales incorrectas. Por favor, inténtalo de nuevo.",
+      );
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text>Login</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Username"
+        value={username}
+        onChangeText={setUsername}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        secureTextEntry={true}
+        value={password}
+        onChangeText={setPassword}
+      />
+      <Button title="Login" onPress={() => handleLogin()} />
+    </View>
+  );
+}
+```
+
+**Source:** `app/(auth)/login.tsx:8-52`
+
+### Login Flow
+
+<Steps>
+  <Step title="Collect Credentials">
+    User enters username and password in form fields
+  </Step>
+  <Step title="Submit to Backend">
+    POST request sent to `/api/token/` endpoint
+  </Step>
+  <Step title="Receive Tokens">
+    Backend returns access token, refresh token, and optional user data
+  </Step>
+  <Step title="Store Securely">
+    Tokens are saved to SecureStore, user data saved to auth store
+  </Step>
+  <Step title="Navigate to App">
+    User is redirected to profile page (main app area)
+  </Step>
+</Steps>
+
+### Error Handling
+
+```typescript
+try {
+  const { data } = await api.post<LoginResponse>("/token/", {
+    username,
+    password,
+  });
+  // Handle success
+} catch (error) {
+  console.log(error);
+  Alert.alert(
+    "Error",
+    "Credenciales incorrectas. Por favor, inténtalo de nuevo.",
+  );
+}
+```
+
+**Source:** `app/(auth)/login.tsx:14-31`
+
+The login screen displays a user-friendly alert dialog when authentication fails.
+
+## Registration Process
+
+<Note>
+The registration endpoint is currently not implemented in the source code. The file `/app/(auth)/register.tsx` exists but is empty.
+</Note>
+
+### Recommended Registration Implementation
+
+```typescript
+import React, { useState } from "react";
+import { View, Text, TextInput, Button, Alert, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import api from "@/api/axios";
+import { useAuthStore } from "@/store/useAuthStore";
+
+export default function Register() {
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const login = useAuthStore((state) => state.login);
+  const router = useRouter();
+
+  const handleRegister = async () => {
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Las contraseñas no coinciden");
+      return;
+    }
+
+    try {
+      const { data } = await api.post("/register/", {
+        username,
+        email,
+        password,
+      });
+      
+      // Automatically log in after successful registration
+      const { access, refresh, user } = data;
+      await login(access, refresh, user, true);
+      router.replace("/(main)/profile");
+    } catch (error) {
+      Alert.alert("Error", "No se pudo crear la cuenta. Inténtalo de nuevo.");
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Crear Cuenta</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Nombre de usuario"
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Contraseña"
+        secureTextEntry={true}
+        value={password}
+        onChangeText={setPassword}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Confirmar contraseña"
+        secureTextEntry={true}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+      />
+      <Button title="Registrarse" onPress={handleRegister} />
+    </View>
+  );
+}
+```
+
+## Authentication Store
+
+The auth store manages authentication state using Zustand and Expo SecureStore.
+
+### Store Implementation
+
+```typescript
+import { create } from "zustand";
+import * as SecureStore from "expo-secure-store";
+import { AuthState } from "@/types/auth";
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  token: null,
+  refresh: null,
+  isLoading: true, // Start in loading state to block navigation
+
+  login: async (token, refresh, userData) => {
+    await SecureStore.setItemAsync("userToken", token);
+    await SecureStore.setItemAsync("refreshToken", refresh);
+    set({ token, refresh, user: userData, isLoading: false });
+  },
+
+  logout: async () => {
+    await SecureStore.deleteItemAsync("userToken");
+    await SecureStore.deleteItemAsync("refreshToken");
+    set({ token: null, refresh: null, user: null, isLoading: false });
+  },
+
+  initialize: async () => {
+    try {
+      const token = await SecureStore.getItemAsync("userToken");
+      // Set token if exists and always turn off loading
+      set({ token, isLoading: false });
+    } catch (error) {
+      console.error("Error cargando el token:", error);
+      set({ isLoading: false });
+    }
+  },
+}));
+```
+
+**Source:** `store/useAuthStore.ts:1-33`
+
+### Store Methods
+
+<CardGroup cols={2}>
+  <Card title="login()" icon="right-to-bracket">
+    Stores tokens in SecureStore and updates auth state with user data
+  </Card>
+  <Card title="logout()" icon="right-from-bracket">
+    Removes tokens from SecureStore and clears auth state
+  </Card>
+  <Card title="initialize()" icon="rotate">
+    Loads saved token on app startup for session persistence
+  </Card>
+</CardGroup>
+
+## Token Lifecycle
+
+### Access Token Injection
+
+The axios instance automatically adds the access token to all requests:
+
+```typescript
+import axios from "axios";
+import * as SecureStore from "expo-secure-store";
+
+const api = axios.create({
+  baseURL: "http://localhost:8000/api",
+});
+
+api.interceptors.request.use(
+  async (config) => {
+    const token = await SecureStore.getItemAsync("userToken");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+```
+
+**Source:** `api/axios.ts:5-18`
+
+### Automatic Token Refresh
+
+When an access token expires (401 response), the refresh token is automatically used to obtain a new access token:
+
+```typescript
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log("Token expirado, intentando refrescar...");
+      originalRequest._retry = true;
+      try {
+        const refreshToken = await SecureStore.getItemAsync("refreshToken");
+        if (!refreshToken) {
+          return Promise.reject(error);
+        }
+
+        const response = await axios.post(
+          "http://localhost:8000/api/token/refresh/",
+          { refresh: refreshToken },
+        );
+        const { access } = response.data;
+        await SecureStore.setItemAsync("userToken", access);
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.log("Error al refrescar token =>", refreshError);
+        const { logout } = useAuthStore.getState();
+        logout();
+        return Promise.reject(refreshError);
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+```
+
+**Source:** `api/axios.ts:20-55`
+
+### Token Refresh Flow
+
+<Steps>
+  <Step title="401 Detected">
+    API request receives 401 Unauthorized response
+  </Step>
+  <Step title="Check Retry Flag">
+    Ensure this request hasn't been retried already
+  </Step>
+  <Step title="Get Refresh Token">
+    Retrieve refresh token from SecureStore
+  </Step>
+  <Step title="Request New Access Token">
+    POST refresh token to `/api/token/refresh/`
+  </Step>
+  <Step title="Store New Token">
+    Save new access token to SecureStore
+  </Step>
+  <Step title="Retry Original Request">
+    Retry the failed request with new access token
+  </Step>
+  <Step title="Handle Failure">
+    If refresh fails, log user out and reject request
+  </Step>
+</Steps>
+
+## Session Persistence
+
+Sessions persist across app restarts using SecureStore:
+
+```typescript
+initialize: async () => {
+  try {
+    const token = await SecureStore.getItemAsync("userToken");
+    set({ token, isLoading: false });
+  } catch (error) {
+    console.error("Error cargando el token:", error);
+    set({ isLoading: false });
+  }
+}
+```
+
+**Source:** `store/useAuthStore.ts:23-32`
+
+<Info>
+The `initialize()` method should be called when the app starts, typically in your root layout or App component, to restore the user's session.
+</Info>
+
+## Logout Functionality
+
+Logging out clears all authentication data:
+
+```typescript
+logout: async () => {
+  await SecureStore.deleteItemAsync("userToken");
+  await SecureStore.deleteItemAsync("refreshToken");
+  set({ token: null, refresh: null, user: null, isLoading: false });
+}
+```
+
+**Source:** `store/useAuthStore.ts:17-21`
+
+### Logout Process
+
+1. Delete access token from SecureStore
+2. Delete refresh token from SecureStore
+3. Clear user data from auth store
+4. Reset loading state
+5. App navigation automatically redirects to login screen
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Token Storage">
+    - Always use SecureStore for tokens (encrypted Keychain on iOS, KeyStore on Android)
+    - Never store tokens in AsyncStorage or plain text
+    - Never log tokens to console in production
+    - Clear tokens immediately on logout
+  </Accordion>
+
+  <Accordion title="Password Security">
+    - Use `secureTextEntry={true}` for password fields
+    - Never store passwords locally
+    - Implement password strength requirements
+    - Support password reset functionality
+  </Accordion>
+
+  <Accordion title="API Security">
+    - Always use HTTPS in production
+    - Validate tokens on every protected endpoint
+    - Implement rate limiting for auth endpoints
+    - Use short-lived access tokens (5-15 minutes)
+    - Use longer-lived refresh tokens (7-30 days)
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    - Don't reveal sensitive information in error messages
+    - Log authentication errors for monitoring
+    - Implement account lockout after failed attempts
+    - Show generic error messages to users
+  </Accordion>
+</AccordionGroup>
+
+## API Endpoints
+
+### Login
+
+```
+POST /api/token/
+```
+
+**Request Body:**
+```json
+{
+  "username": "user123",
+  "password": "securepassword"
+}
+```
+
+**Response:**
+```json
+{
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "user": {
+    "id": 1,
+    "username": "user123",
+    "email": "user@example.com"
+  }
+}
+```
+
+### Token Refresh
+
+```
+POST /api/token/refresh/
+```
+
+**Request Body:**
+```json
+{
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+}
+```
+
+**Response:**
+```json
+{
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+}
+```
+
+### Registration (Recommended)
+
+```
+POST /api/register/
+```
+
+**Request Body:**
+```json
+{
+  "username": "newuser",
+  "email": "newuser@example.com",
+  "password": "securepassword"
+}
+```
+
+## UI Components
+
+### Login Form Styling
+
+```typescript
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+  },
+  input: {
+    borderBottomWidth: 1,
+    marginBottom: 15,
+    padding: 8,
+  },
+  button: {
+    backgroundColor: "#007BFF",
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+});
+```
+
+**Source:** `app/(auth)/login.tsx:55-72`
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Loading States" icon="spinner">
+    Show loading indicators during login/logout operations
+  </Card>
+  <Card title="Form Validation" icon="check">
+    Validate input fields before submission
+  </Card>
+  <Card title="Error Feedback" icon="circle-exclamation">
+    Provide clear, actionable error messages
+  </Card>
+  <Card title="Auto-Login" icon="clock">
+    Automatically restore sessions on app startup
+  </Card>
+  <Card title="Secure Storage" icon="lock">
+    Use SecureStore for all sensitive data
+  </Card>
+  <Card title="Token Rotation" icon="rotate">
+    Implement automatic token refresh
+  </Card>
+</CardGroup>
+
+## Related Features
+
+- [User Management](/features/user-management) - Profile and user data
+- [Books Management](/features/books-management) - Requires authentication
+- [Authors Management](/features/authors-management) - Requires authentication
+- [API Reference](/api/auth-store) - Complete API documentation

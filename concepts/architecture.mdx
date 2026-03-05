@@ -1,0 +1,290 @@
+---
+title: Application Architecture
+description: Understanding the overall architecture and project structure of AppBiblioteca
+---
+
+## Overview
+
+AppBiblioteca is a React Native library management application built with Expo, following modern mobile development best practices. The architecture emphasizes separation of concerns, type safety, and maintainability.
+
+## Project Structure
+
+The application is organized into distinct directories, each serving a specific purpose:
+
+```
+AppBiblioteca/
+├── app/                    # File-based routing (Expo Router)
+│   ├── _layout.tsx        # Root layout with auth guards
+│   ├── (auth)/            # Authentication routes group
+│   │   ├── _layout.tsx
+│   │   ├── login.tsx
+│   │   └── register.tsx
+│   └── (main)/            # Protected main app routes
+│       ├── _layout.tsx
+│       ├── add_book.tsx
+│       └── (tabs)/        # Bottom tab navigation
+│           ├── _layout.tsx
+│           ├── index.tsx
+│           ├── profile.tsx
+│           ├── users.tsx
+│           ├── authors.tsx
+│           └── books.tsx
+├── api/                   # API configuration and interceptors
+│   └── axios.ts
+├── store/                 # State management (Zustand)
+│   └── useAuthStore.ts
+├── types/                 # TypeScript type definitions
+│   └── auth.ts
+└── components/            # Reusable UI components
+```
+
+<Note>
+The parentheses in directory names like `(auth)` and `(main)` are Expo Router route groups. They organize routes without affecting the URL structure.
+</Note>
+
+## Architectural Layers
+
+### 1. Presentation Layer (UI)
+
+The presentation layer consists of React components located in the `app/` directory. These components:
+
+- Handle user interface rendering
+- Manage local component state
+- Consume global state from Zustand stores
+- Navigate between screens using Expo Router
+
+### 2. State Management Layer
+
+Centralized state management using Zustand stores in the `store/` directory:
+
+- **useAuthStore**: Manages authentication state, tokens, and user data
+- Provides actions for login, logout, and initialization
+- Persists tokens using expo-secure-store
+
+### 3. API Layer
+
+API communication handled through a configured Axios instance in `api/axios.ts`:
+
+- Centralized HTTP client configuration
+- Request/response interceptors for authentication
+- Automatic token refresh on 401 errors
+- Base URL configuration
+
+### 4. Type Safety Layer
+
+TypeScript interfaces and types in the `types/` directory:
+
+- Define data structures for User, LoginResponse, AuthState
+- Ensure type safety across the application
+- Improve developer experience with autocomplete
+
+## File-Based Routing with Expo Router
+
+AppBiblioteca uses Expo Router for navigation, which provides:
+
+- **File-based routing**: File system structure maps directly to app routes
+- **Type-safe navigation**: Automatic route typing
+- **Layout nesting**: Shared layouts through `_layout.tsx` files
+- **Route groups**: Organize routes without affecting URLs
+
+### Route Hierarchy
+
+```
+app/_layout.tsx              → Root layout with auth guards
+├── (auth)/_layout.tsx       → Auth group layout (Stack)
+│   ├── login.tsx            → /login
+│   └── register.tsx         → /register
+└── (main)/_layout.tsx       → Main group layout (Stack)
+    ├── add_book.tsx         → /(main)/add_book
+    └── (tabs)/_layout.tsx   → Tab navigator
+        ├── index.tsx        → /(main)/(tabs) (Home)
+        ├── profile.tsx      → /(main)/(tabs)/profile
+        ├── users.tsx        → /(main)/(tabs)/users
+        ├── authors.tsx      → /(main)/(tabs)/authors
+        └── books.tsx        → /(main)/(tabs)/books
+```
+
+## Component Organization
+
+### Layout Components
+
+Layout components define the navigation structure for their route segments:
+
+- **Root Layout** (`app/_layout.tsx`): Handles authentication guards and initial navigation
+- **Auth Layout** (`app/(auth)/_layout.tsx`): Stack navigator for authentication screens
+- **Main Layout** (`app/(main)/_layout.tsx`): Stack navigator for authenticated screens
+- **Tabs Layout** (`app/(main)/(tabs)/_layout.tsx`): Bottom tab navigation
+
+### Screen Components
+
+Screen components represent individual pages:
+
+- Located in the `app/` directory structure
+- Export a default React component
+- Can access route parameters and navigation
+
+## Data Flow Architecture
+
+### Authentication Flow
+
+```
+┌─────────────┐
+│   User      │
+│   Action    │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Login Component    │
+│  (UI Layer)         │
+└──────┬──────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  API Layer          │
+│  (axios.ts)         │
+└──────┬──────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Backend API        │
+└──────┬──────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Auth Store         │
+│  (State Layer)      │
+└──────┬──────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Secure Storage     │
+│  (Persistence)      │
+└──────┬──────────────┘
+       │
+       ▼
+┌─────────────────────┐
+│  Navigation Guard   │
+│  (Root Layout)      │
+└─────────────────────┘
+```
+
+### Request Flow with Token Refresh
+
+```
+Component makes API request
+         │
+         ▼
+┌────────────────────────┐
+│ Request Interceptor    │
+│ Adds Bearer token      │
+└────────┬───────────────┘
+         │
+         ▼
+   API Call to Backend
+         │
+         ▼
+    401 Response?
+    ┌───┴───┐
+   NO      YES
+    │       │
+    │       ▼
+    │  ┌────────────────────┐
+    │  │ Response           │
+    │  │ Interceptor        │
+    │  └────────┬───────────┘
+    │           │
+    │           ▼
+    │  ┌────────────────────┐
+    │  │ Refresh Token API  │
+    │  └────────┬───────────┘
+    │           │
+    │      Success?
+    │      ┌───┴───┐
+    │     YES     NO
+    │      │       │
+    │      │       ▼
+    │      │  ┌────────────┐
+    │      │  │   Logout   │
+    │      │  └────────────┘
+    │      │
+    │      ▼
+    │  ┌────────────────────┐
+    │  │ Retry Original     │
+    │  │ Request            │
+    │  └────────┬───────────┘
+    │           │
+    └───────────┘
+         │
+         ▼
+    Return Response
+```
+
+## Separation of Concerns
+
+### Clear Boundaries
+
+The architecture maintains clear separation:
+
+1. **UI Components**: Only handle presentation and user interaction
+2. **State Management**: Manages application state and business logic
+3. **API Layer**: Handles all backend communication
+4. **Type Definitions**: Centralize data structure contracts
+
+### Benefits
+
+- **Maintainability**: Changes in one layer don't affect others
+- **Testability**: Each layer can be tested independently
+- **Reusability**: Components and logic can be reused
+- **Scalability**: Easy to add new features following the same patterns
+
+<Warning>
+Avoid mixing concerns by putting API calls directly in components or storing UI state in global stores. Follow the established patterns.
+</Warning>
+
+## Key Architectural Decisions
+
+### Why Expo Router?
+
+- File-based routing reduces boilerplate
+- Built-in deep linking support
+- Type-safe navigation
+- Native navigation performance
+
+### Why Zustand?
+
+- Minimal boilerplate compared to Redux
+- Simple API with hooks
+- No context providers needed
+- Easy integration with async storage
+
+### Why Axios over Fetch?
+
+- Interceptors for request/response manipulation
+- Automatic JSON transformation
+- Request cancellation support
+- Better error handling
+
+### Why expo-secure-store?
+
+- Encrypted storage for sensitive data
+- Platform-specific secure storage (Keychain on iOS, KeyStore on Android)
+- Simple async API
+- Perfect for storing JWT tokens
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/concepts/authentication">
+    Learn how JWT authentication is implemented
+  </Card>
+  <Card title="Routing" icon="route" href="/concepts/routing">
+    Deep dive into Expo Router navigation
+  </Card>
+  <Card title="State Management" icon="database" href="/concepts/state-management">
+    Understand Zustand store implementation
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/auth-store">
+    Explore the API documentation
+  </Card>
+</CardGroup>

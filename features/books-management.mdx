@@ -1,0 +1,224 @@
+---
+title: Books Management
+description: Learn how to manage books in AppBiblioteca, including viewing, adding, and organizing your book collection
+---
+
+## Overview
+
+The Books Management feature allows users to view and manage their book collection. Books are displayed in a scrollable list with options to view details and add new books to the library.
+
+## Data Structure
+
+Books in AppBiblioteca follow a simple interface structure:
+
+```typescript
+interface Book {
+  id: number;
+  title: string;
+}
+```
+
+**Source:** `app/(main)/(tabs)/books.tsx:15-18`
+
+## Viewing Books List
+
+The books list is the main interface for browsing your book collection. It's implemented using React Native's `FlatList` component for optimal performance with large datasets.
+
+### Implementation
+
+```typescript
+import React, { useEffect, useState } from "react";
+import { FlatList } from "react-native";
+import api from "@/api/axios";
+
+export default function Books() {
+  const [books, setBooks] = useState<Book[]>([]);
+
+  useEffect(() => {
+    try {
+      api.get("/books/").then((response) => {
+        setBooks(response.data);
+      });
+    } catch (error) {
+      console.log("Error fetching books =>", error);
+    }
+  }, []);
+
+  return (
+    <FlatList
+      data={books}
+      keyExtractor={(item) => item.id.toString()}
+      renderItem={({ item }) => <Item title={item.title} />}
+    />
+  );
+}
+```
+
+**Source:** `app/(main)/(tabs)/books.tsx:31-52`
+
+### Key Features
+
+- **Automatic Data Fetching**: Books are fetched automatically when the component mounts using `useEffect`
+- **Optimized Rendering**: Uses `FlatList` for efficient rendering of large lists
+- **Unique Keys**: Each book item uses its ID as a unique key for React reconciliation
+
+## API Integration
+
+Books are fetched from the backend API using the axios instance configured with authentication.
+
+### Endpoint
+
+```
+GET /api/books/
+```
+
+### Response Format
+
+```json
+[
+  {
+    "id": 1,
+    "title": "The Great Gatsby"
+  },
+  {
+    "id": 2,
+    "title": "To Kill a Mockingbird"
+  }
+]
+```
+
+### Authentication
+
+All API requests automatically include the Bearer token from secure storage via axios interceptors.
+
+**Source:** `api/axios.ts:9-18`
+
+## Book List Item Component
+
+Each book is rendered using a custom `Item` component with a consistent design:
+
+```typescript
+type ItemProps = { title: string };
+
+const Item = ({ title }: ItemProps) => (
+  <View style={styles.item}>
+    <Text style={styles.title}>{title}</Text>
+    <TouchableOpacity style={{ marginLeft: "auto" }}>
+      <Text style={{ color: "white" }}>Ver Libros</Text>
+    </TouchableOpacity>
+  </View>
+);
+```
+
+**Source:** `app/(main)/(tabs)/books.tsx:20-29`
+
+### Styling
+
+The book items feature a modern card-based design:
+
+```typescript
+const styles = StyleSheet.create({
+  item: {
+    display: "flex",
+    flexDirection: "row",
+    backgroundColor: "#3eb3f2",
+    padding: 20,
+    marginVertical: 8,
+    marginHorizontal: 16,
+    borderRadius: 8,
+  },
+  title: {
+    fontSize: 32,
+  },
+});
+```
+
+**Source:** `app/(main)/(tabs)/books.tsx:61-78`
+
+## Adding New Books
+
+Users can add new books to the library through a dedicated form accessible via a link at the bottom of the books list.
+
+### Navigation
+
+```typescript
+import { Link } from "expo-router";
+
+<Link href="/add_book">
+  <Text style={{ color: "blue", marginTop: 20 }}>Agregar Libro</Text>
+</Link>
+```
+
+**Source:** `app/(main)/(tabs)/books.tsx:53-55`
+
+### Add Book Page
+
+The add book functionality is implemented in a separate route:
+
+```typescript
+export default function AddBookPage() {
+  return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <Text>Add Book Page</Text>
+    </View>
+  );
+}
+```
+
+**Source:** `app/(main)/add_book.tsx:2-8`
+
+<Note>
+The add book form is currently a placeholder and can be extended with form fields for book title, author, ISBN, publication date, and other metadata.
+</Note>
+
+## Error Handling
+
+The books list implements basic error handling for API failures:
+
+```typescript
+try {
+  api.get("/books/").then((response) => {
+    setBooks(response.data);
+  });
+} catch (error) {
+  console.log("Error fetching books =>", error);
+}
+```
+
+Errors are logged to the console for debugging purposes. In production, you may want to:
+
+- Display user-friendly error messages
+- Implement retry logic
+- Show loading states while fetching
+- Handle offline scenarios
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Performance Optimization">
+    - Use `FlatList` instead of `ScrollView` for large lists
+    - Implement pagination for better performance with thousands of books
+    - Consider adding pull-to-refresh functionality
+    - Cache book data to reduce API calls
+  </Accordion>
+
+  <Accordion title="User Experience">
+    - Add loading indicators during data fetching
+    - Implement search and filter functionality
+    - Show empty state when no books are available
+    - Add confirmation dialogs for destructive actions
+  </Accordion>
+
+  <Accordion title="Data Management">
+    - Validate book data before saving
+    - Handle duplicate book entries
+    - Implement soft delete for books
+    - Keep local cache in sync with backend
+  </Accordion>
+</AccordionGroup>
+
+## Related Features
+
+- [Authors Management](/features/authors-management) - Manage book authors
+- [Authentication Flow](/features/authentication-flow) - Required for API access
+- [API Reference](/api/auth-store) - Complete API documentation

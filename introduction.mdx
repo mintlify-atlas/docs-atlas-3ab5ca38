@@ -1,0 +1,118 @@
+---
+title: Introduction
+description: Learn about AppBiblioteca, a modern library management application built with React Native and Expo
+---
+
+# Introduction to AppBiblioteca
+
+AppBiblioteca is a cross-platform library management application built with React Native and Expo. It provides a modern, intuitive interface for managing books, authors, and users across iOS, Android, and web platforms.
+
+## What is AppBiblioteca?
+
+AppBiblioteca is a comprehensive library management solution that allows librarians and administrators to:
+
+- Manage book collections with detailed cataloging
+- Track authors and their works
+- Handle user management and authentication
+- Access the library system from any device (mobile or web)
+- Perform CRUD operations on library resources
+
+The app is designed with a mobile-first approach while maintaining full web compatibility, making it accessible from anywhere.
+
+## Key Features
+
+### Cross-Platform Support
+Built with Expo, AppBiblioteca runs seamlessly on:
+- **iOS** devices (iPhone and iPad)
+- **Android** smartphones and tablets
+- **Web browsers** for desktop access
+
+### Secure Authentication
+- JWT-based authentication with token refresh
+- Secure token storage using Expo SecureStore
+- Automatic session management
+- Protected routes and API calls
+
+### Complete Library Management
+- **Books**: Add, view, and manage book collections
+- **Authors**: Track author information and their works
+- **Users**: User management with role-based access
+- **Profile**: User profile management and preferences
+
+### Modern User Experience
+- Clean, intuitive interface
+- Tab-based navigation for easy access
+- Real-time data synchronization
+- Dark mode support (automatic based on system preferences)
+- Haptic feedback for better interaction
+
+## Who Should Use AppBiblioteca?
+
+AppBiblioteca is ideal for:
+
+- **Small to medium-sized libraries** looking for a modern digital solution
+- **Educational institutions** managing their book collections
+- **Community centers** with lending libraries
+- **Book clubs and reading groups** tracking shared resources
+- **Developers** learning React Native and Expo development
+
+## Tech Stack
+
+AppBiblioteca is built with modern, industry-standard technologies:
+
+### Frontend Framework
+- **React Native 0.81.5**: Cross-platform mobile development
+- **React 19.1.0**: Latest React features and performance improvements
+- **TypeScript 5.9.2**: Type-safe development with full IDE support
+
+### Navigation & Routing
+- **Expo Router 6.0**: File-based routing system
+- **React Navigation**: Native navigation patterns
+- **Typed Routes**: Type-safe navigation with autocomplete
+
+### State Management
+- **Zustand 5.0**: Lightweight, fast state management
+- **Expo SecureStore**: Encrypted storage for sensitive data
+
+### API & Networking
+- **Axios 1.13.5**: HTTP client with interceptors
+- **JWT Authentication**: Token-based security
+- **Automatic token refresh**: Seamless session management
+
+### Development Experience
+- **Expo SDK 54**: Latest Expo features and APIs
+- **TypeScript**: Full type safety across the codebase
+- **ESLint**: Code quality and consistency
+- **React Compiler (Experimental)**: Improved performance
+- **New Architecture**: React Native's new architecture enabled
+
+### UI/UX Libraries
+- **Expo Vector Icons**: Comprehensive icon library
+- **React Native Reanimated**: Smooth animations
+- **React Native Gesture Handler**: Native gesture recognition
+- **Safe Area Context**: Proper handling of device notches and insets
+
+## Architecture Highlights
+
+### File-Based Routing
+The app uses Expo Router's file-based routing system, organizing screens into logical groups:
+- `(auth)` - Authentication screens (login, register)
+- `(main)/(tabs)` - Main app with tab navigation (books, authors, users, profile)
+
+### State Management
+Zustand provides a simple, scalable state management solution with minimal boilerplate. The auth store handles user authentication state globally.
+
+### API Integration
+Axios is configured with interceptors for:
+- Automatic JWT token injection
+- Token refresh on 401 responses
+- Centralized error handling
+- Base URL configuration
+
+## Getting Started
+
+Ready to start using AppBiblioteca? Check out the [Quickstart Guide](/quickstart) to get up and running in minutes, or dive into the [Installation Guide](/installation) for detailed setup instructions.
+
+<Note>
+AppBiblioteca requires a backend API to function. Make sure you have access to the library management API endpoint before proceeding with the installation.
+</Note>

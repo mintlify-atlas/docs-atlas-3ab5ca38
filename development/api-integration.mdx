@@ -1,0 +1,435 @@
+---
+title: 'API Integration'
+description: 'How to integrate with the backend API using the configured Axios client'
+---
+
+## Overview
+
+AppBiblioteca uses **Axios** for all HTTP requests to the backend API. The API client is pre-configured with authentication, token refresh, and error handling.
+
+## Axios Client Setup
+
+The main API client is located at `api/axios.ts`:
+
+```typescript api/axios.ts
+import axios from "axios";
+import * as SecureStore from "expo-secure-store";
+import { useAuthStore } from "@/store/useAuthStore";
+
+const api = axios.create({
+  baseURL: "http://localhost:8000/api",
+});
+```
+
+### Base URL Configuration
+
+The base URL is currently set to `http://localhost:8000/api` for local development.
+
+<Tip>
+For production, update the `baseURL` to your production API endpoint. Consider using environment variables:
+
+```typescript
+baseURL: process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000/api"
+```
+</Tip>
+
+## Request Interceptor
+
+The request interceptor automatically adds the authentication token to every request:
+
+```typescript api/axios.ts
+api.interceptors.request.use(
+  async (config) => {
+    const token = await SecureStore.getItemAsync("userToken");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+```
+
+### How It Works
+
+<Steps>
+  <Step title="Retrieve Token">
+    Gets the stored JWT token from `expo-secure-store`
+  </Step>
+  
+  <Step title="Add Authorization Header">
+    Attaches the token as a `Bearer` token in the Authorization header
+  </Step>
+  
+  <Step title="Send Request">
+    Proceeds with the request including the authentication header
+  </Step>
+</Steps>
+
+<Info>
+You don't need to manually add the Authorization header - it's handled automatically for all requests using the `api` instance.
+</Info>
+
+## Response Interceptor
+
+The response interceptor handles token refresh when the access token expires:
+
+```typescript api/axios.ts
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log("Token expirado, intentando refrescar...");
+      originalRequest._retry = true;
+      
+      try {
+        const refreshToken = await SecureStore.getItemAsync("refreshToken");
+        if (!refreshToken) {
+          return Promise.reject(error);
+        }
+
+        const response = await axios.post(
+          "http://localhost:8000/api/token/refresh/",
+          { refresh: refreshToken },
+        );
+        
+        const { access } = response.data;
+        await SecureStore.setItemAsync("userToken", access);
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.log("Error al refrescar token =>", refreshError);
+        const {logout} = useAuthStore.getState();
+        logout();
+        return Promise.reject(refreshError);
+      }
+    }
+    return Promise.reject(error);
+  },
+);
+```
+
+### Token Refresh Flow
+
+<Steps>
+  <Step title="Detect 401 Error">
+    When a request fails with status 401 (Unauthorized)
+  </Step>
+  
+  <Step title="Attempt Token Refresh">
+    Uses the refresh token to request a new access token from `/token/refresh/`
+  </Step>
+  
+  <Step title="Retry Original Request">
+    If refresh succeeds, retries the original request with the new token
+  </Step>
+  
+  <Step title="Logout on Failure">
+    If refresh fails, logs out the user and clears stored tokens
+  </Step>
+</Steps>
+
+<Warning>
+The `_retry` flag prevents infinite loops if the token refresh itself fails with a 401.
+</Warning>
+
+## Making API Calls
+
+### In Components
+
+Import the configured `api` instance and use it like standard Axios:
+
+```typescript app/(main)/(tabs)/books.tsx
+import { useEffect, useState } from "react";
+import api from "@/api/axios";
+
+interface Book {
+  id: number;
+  title: string;
+}
+
+export default function Books() {
+  const [books, setBooks] = useState<Book[]>([]);
+
+  useEffect(() => {
+    try {
+      api.get("/books/").then((response) => {
+        setBooks(response.data);
+      });
+    } catch (error) {
+      console.log("Error fetching books =>", error);
+    }
+  }, []);
+
+  // ... render books
+}
+```
+
+### Common HTTP Methods
+
+<CodeGroup>
+
+```typescript GET Request
+// Fetch all items
+const response = await api.get("/books/");
+const books = response.data;
+
+// Fetch single item
+const response = await api.get(`/books/${id}/`);
+const book = response.data;
+
+// With query parameters
+const response = await api.get("/books/", {
+  params: { author: "John Doe", year: 2024 }
+});
+```
+
+```typescript POST Request
+// Create new resource
+const newBook = {
+  title: "1984",
+  author_id: 1,
+  published_date: "1949-06-08"
+};
+
+const response = await api.post("/books/", newBook);
+const createdBook = response.data;
+```
+
+```typescript PUT/PATCH Request
+// Full update (PUT)
+const updatedBook = {
+  title: "Animal Farm",
+  author_id: 1,
+  published_date: "1945-08-17"
+};
+
+const response = await api.put(`/books/${id}/`, updatedBook);
+
+// Partial update (PATCH)
+const response = await api.patch(`/books/${id}/`, {
+  title: "New Title"
+});
+```
+
+```typescript DELETE Request
+// Delete resource
+const response = await api.delete(`/books/${id}/`);
+```
+
+</CodeGroup>
+
+## Error Handling
+
+### Try-Catch Pattern
+
+Always wrap API calls in try-catch blocks:
+
+```typescript
+const fetchAuthors = async () => {
+  try {
+    const response = await api.get("/authors/");
+    setAuthors(response.data);
+  } catch (error) {
+    console.error("Error fetching authors:", error);
+    // Handle error (show message to user, etc.)
+  }
+};
+```
+
+### Handling Different Error Types
+
+```typescript
+import { AxiosError } from 'axios';
+
+try {
+  const response = await api.post("/books/", newBook);
+  setBooks([...books, response.data]);
+} catch (error) {
+  if (error instanceof AxiosError) {
+    if (error.response) {
+      // Server responded with error status
+      console.error("Server error:", error.response.status);
+      console.error("Error data:", error.response.data);
+      
+      if (error.response.status === 400) {
+        Alert.alert("Validation Error", "Please check your input");
+      } else if (error.response.status === 404) {
+        Alert.alert("Not Found", "The requested resource was not found");
+      }
+    } else if (error.request) {
+      // Request made but no response received
+      Alert.alert("Network Error", "Please check your connection");
+    }
+  } else {
+    // Something else happened
+    console.error("Unexpected error:", error);
+  }
+}
+```
+
+## Real Examples from the App
+
+### Example 1: Fetching Books
+
+From `app/(main)/(tabs)/books.tsx`:
+
+```typescript app/(main)/(tabs)/books.tsx
+import React, { useEffect, useState } from "react";
+import api from "@/api/axios";
+
+interface Book {
+  id: number;
+  title: string;
+}
+
+export default function Books() {
+  const [books, setBooks] = useState<Book[]>([]);
+
+  useEffect(() => {
+    try {
+      api.get("/books/").then((response) => {
+        setBooks(response.data);
+      });
+    } catch (error) {
+      console.log("Error fetching books =>", error);
+    }
+  }, []);
+
+  // ... rest of component
+}
+```
+
+### Example 2: Fetching Authors
+
+From `app/(main)/(tabs)/authors.tsx`:
+
+```typescript app/(main)/(tabs)/authors.tsx
+import React, { useEffect, useState } from "react";
+import api from "@/api/axios";
+
+interface Author {
+  id: number;
+  name: string;
+}
+
+export default function Authors() {
+  const [authors, setAuthors] = useState<Author[]>([]);
+
+  useEffect(() => {
+    try {
+      api.get("/authors/").then((response) => {
+        setAuthors(response.data);
+      });
+    } catch (error) {
+      console.log("Error fetching authors =>", error);
+    }
+  }, []);
+
+  // ... rest of component
+}
+```
+
+### Example 3: User Login
+
+From `app/(auth)/login.tsx`:
+
+```typescript app/(auth)/login.tsx
+import { useState } from "react";
+import { Alert } from "react-native";
+import { useRouter } from "expo-router";
+import api from "@/api/axios";
+import { useAuthStore } from "@/store/useAuthStore";
+import { LoginResponse } from "@/types/auth";
+
+export default function Login() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const login = useAuthStore((state) => state.login);
+  const router = useRouter();
+
+  const handleLogin = async () => {
+    try {
+      const { data } = await api.post<LoginResponse>("/token/", {
+        username,
+        password,
+      });
+      
+      const { access, refresh, user } = data;
+      await login(access, refresh, user || { id: 1, username }, true);
+      router.replace("/(main)/profile");
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "Credenciales incorrectas. Por favor, inténtalo de nuevo.",
+      );
+    }
+  };
+
+  // ... rest of component
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Use the Configured API Instance">
+    Import `api` from `@/api/axios`, not the raw axios library:
+    
+    ```typescript
+    // ✅ Good
+    import api from '@/api/axios';
+    
+    // ❌ Bad
+    import axios from 'axios';
+    ```
+  </Accordion>
+
+  <Accordion title="Define TypeScript Interfaces">
+    Create interfaces for your API responses:
+    
+    ```typescript
+    interface Book {
+      id: number;
+      title: string;
+      author_id: number;
+    }
+    
+    const response = await api.get<Book[]>('/books/');
+    ```
+  </Accordion>
+
+  <Accordion title="Handle Loading States">
+    Show loading indicators while fetching data:
+    
+    ```typescript
+    const [isLoading, setIsLoading] = useState(false);
+    
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await api.get('/books/');
+        setBooks(response.data);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    ```
+  </Accordion>
+
+  <Accordion title="Use Async/Await">
+    Prefer async/await over .then() chains for better readability:
+    
+    ```typescript
+    // ✅ Good
+    const response = await api.get('/books/');
+    setBooks(response.data);
+    
+    // ⚠️ Less preferred
+    api.get('/books/').then(response => setBooks(response.data));
+    ```
+  </Accordion>
+</AccordionGroup>
